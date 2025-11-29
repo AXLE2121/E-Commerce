@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Foot Locker</title>
+    <link rel="stylesheet" href="styles/style.css">
+    <link rel="stylesheet" href="styles/logo.css">
+
+    <!-- Add Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-top">
+            <div class="logo-container">
+                <img src="images/logo.png" alt="Foot Locker Logo" class="logo-img">
+                <h1 class="logo">Foot Locker</h1>
+            </div>
+            <!-- Search and User Actions Container -->
+            <div class="search-actions-container">
+                <div class="search-bar">
+                    <input type="text" placeholder="Search product..." class="search-input">
+                </div>
+                
+                <!-- User Actions - Added beside search bar -->
+                <div class="user-actions">
+                    <div class="auth-buttons">
+                        <a href="login.html" class="auth-btn login-btn">
+                            <i class="fas fa-sign-in-alt"></i> Login
+                        </a>
+                        <span class="auth-separator">|</span>
+                        <a href="register.html" class="auth-btn register-btn">
+                            <i class="fas fa-user-plus"></i> Register
+                        </a>
+                    </div>
+                    
+                    <div class="action-icons">
+                        <a href="favorites.html" class="icon-btn favorites-btn">
+                            <i class="fas fa-heart"></i>
+                            <span class="icon-badge">0</span>
+                        </a>
+                        
+                        <a href="cart.html" class="icon-btn cart-btn">
+                            <i class="fas fa-shopping-cart"></i>
+                            <span class="icon-badge">0</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        
+    </header>
+
+    <!-- Main Content -->
+    <div class="main-container">
+        <!-- Filters Sidebar -->
+        <aside class="sidebar">
+            <div class="filters">
+                <h3>Filters</h3>
+                             
+
+                <div class="filter-section">
+                    <h4>Brand</h4>
+                    <input type="text" placeholder="Search" class="brand-search" id="brandSearch">
+                    <div class="filter-option">
+                        <label>
+                            <input type="checkbox" data-filter="brand" value="Nike">
+                            NIKE (382)
+                        </label>
+                    </div>
+                    <div class="filter-option">
+                        <label>
+                            <input type="checkbox" data-filter="brand" value="ADIDAS">
+                            ADIDAS (180)
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Products Grid -->
+        <main class="content">
+            <div class="product-grid-container">
+                <div class="results-header">
+                    <span id="resultsCount">Showing 0 results</span>
+                    <div class="sort-options">
+                        <select class="sort-select" id="sortSelect">
+                            <option value="relevance">Relevance</option>
+                            <option value="price-low">Price: Low to High</option>
+                            <option value="price-high">Price: High to Low</option>
+                            <option value="newest">Newest</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="product-grid" id="productGrid">
+                    <!-- Products will be dynamically inserted here -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- JavaScript Files -->
+    <script src="js/data.js"></script>
+    <script src="js/components.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

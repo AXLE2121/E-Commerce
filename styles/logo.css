@@ -1,0 +1,46 @@
+/* Logo Container */
+.logo-container {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.logo-img {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+}
+
+.logo {
+    font-size: 24px;
+    font-weight: bold;
+    color: #d50000;
+    margin: 0;
+}
+
+/* Responsive Design for Logo */
+@media (max-width: 768px) {
+    .logo-img {
+        width: 32px;
+        height: 32px;
+    }
+    
+    .logo {
+        font-size: 20px;
+    }
+    
+    .logo-container {
+        gap: 8px;
+    }
+}
+
+@media (max-width: 480px) {
+    .logo-img {
+        width: 28px;
+        height: 28px;
+    }
+    
+    .logo {
+        font-size: 18px;
+    }
+}
