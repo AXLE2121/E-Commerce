@@ -42,3 +42,4 @@ function addInteractiveFeatures() {
 
 // Make functions globally available for HTML onclick handlers
 window.clearFilters = clearFilters;
+//hehe
