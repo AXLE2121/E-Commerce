@@ -1,0 +1,159 @@
+/* Add these styles to your existing auth.css */
+.error-message {
+    background-color: #ffebee;
+    color: #c62828;
+    padding: 12px;
+    border-radius: 6px;
+    margin-bottom: 20px;
+    border-left: 4px solid #c62828;
+    font-size: 14px;
+}
+
+.loading {
+    text-align: center;
+    padding: 15px;
+    color: #666;
+    font-size: 16px;
+}
+
+.auth-submit-btn:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+}
+
+.auth-submit-btn:disabled:hover {
+    background-color: #cccccc;
+}
+
+/* Email Verification Styles */
+.verification-message {
+    text-align: center;
+    padding: 20px;
+}
+
+.verification-icon {
+    font-size: 64px;
+    color: #d50000;
+    margin-bottom: 20px;
+}
+
+.verification-email {
+    font-weight: bold;
+    color: #d50000;
+    font-size: 18px;
+    margin: 10px 0;
+}
+
+.verification-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin: 30px 0;
+}
+
+.resend-btn {
+    background: #f5f5f5;
+    color: #333;
+    border: 2px solid #ddd;
+    padding: 12px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.resend-btn:hover {
+    background: #e0e0e0;
+    border-color: #d50000;
+}
+
+.login-link-btn {
+    background: #757575;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 6px;
+    text-decoration: none;
+    text-align: center;
+    transition: background-color 0.3s ease;
+}
+
+.login-link-btn:hover {
+    background: #424242;
+}
+
+.verification-note {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 6px;
+    border-left: 4px solid #ff9800;
+    margin-top: 20px;
+}
+
+.verification-note p {
+    margin: 0;
+    color: #666;
+    font-size: 14px;
+}
+
+/* Success Verification Styles */
+.verification-success {
+    text-align: center;
+    padding: 20px;
+}
+
+.success-icon {
+    font-size: 64px;
+    color: #4caf50;
+    margin-bottom: 20px;
+}
+
+.verification-success h2 {
+    color: #4caf50;
+    margin-bottom: 15px;
+}
+
+/* Pending Verification Styles */
+.verification-pending {
+    text-align: center;
+    padding: 20px;
+}
+
+/* Error Verification Styles */
+.verification-error {
+    text-align: center;
+    padding: 20px;
+}
+
+.error-icon {
+    font-size: 64px;
+    color: #f44336;
+    margin-bottom: 20px;
+}
+
+.loading-verification {
+    text-align: center;
+    padding: 40px;
+    color: #666;
+}
+
+.loading-verification i {
+    font-size: 48px;
+    margin-bottom: 20px;
+}
+
+.verification-message-alert {
+    margin-bottom: 20px !important;
+}
+
+/* Responsive Design for Verification */
+@media (max-width: 768px) {
+    .verification-actions {
+        flex-direction: column;
+    }
+    
+    .verification-icon,
+    .success-icon,
+    .error-icon {
+        font-size: 48px;
+    }
+}

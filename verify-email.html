@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Email - Foot Locker</title>
+    <link rel="stylesheet" href="styles/style.css">
+    <link rel="stylesheet" href="styles/logo.css">
+    <link rel="stylesheet" href="styles/auth.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Add Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-top">
+            <div class="logo-container">
+                <a href="index.html">
+                    <img src="images/logo.png" alt="Foot Locker Logo" class="logo-img">
+                </a>
+                <h1 class="logo">Foot Locker</h1>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="auth-main-container">
+        <div class="auth-form-side">
+            <div class="auth-form-container">
+                <div id="verificationContent">
+                    <!-- Content will be dynamically loaded here -->
+                    <div class="loading-verification">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <p>Checking verification status...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCn721TvxMu3R6JX5fpYTXemZPB6alHQX0",
+            authDomain: "shoehub-711f9.firebaseapp.com",
+            projectId: "shoehub-711f9",
+            storageBucket: "shoehub-711f9.firebasestorage.app",
+            messagingSenderId: "719905522600",
+            appId: "1:719905522600:web:3ad4f4c2213b25a9a5d39d"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+
+        // Check verification status
+        auth.onAuthStateChanged((user) => {
+            const verificationContent = document.getElementById('verificationContent');
+            
+            if (user) {
+                if (user.emailVerified) {
+                    // Email is verified
+                    verificationContent.innerHTML = `
+                        <div class="verification-success">
+                            <div class="success-icon">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                            <h2>Email Verified Successfully!</h2>
+                            <p>Your email address has been verified. You can now enjoy all features of Foot Locker.</p>
+                            <div class="verification-actions">
+                                <button class="auth-submit-btn" onclick="window.location.href='index.html'">
+                                    <i class="fas fa-home"></i> Go to Homepage
+                                </button>
+                                <a href="login.html" class="login-link-btn">
+                                    <i class="fas fa-sign-in-alt"></i> Login to Your Account
+                                </a>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Update user data in Firestore if needed
+                    const db = firebase.firestore();
+                    db.collection('users').doc(user.uid).update({
+                        emailVerified: true,
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                } else {
+                    // Email not verified yet
+                    verificationContent.innerHTML = `
+                        <div class="verification-pending">
+                            <div class="verification-icon">
+                                <i class="fas fa-envelope"></i>
+                            </div>
+                            <h2>Email Not Verified Yet</h2>
+                            <p>Your email address <strong>${user.email}</strong> has not been verified yet.</p>
+                            <p>Please check your inbox and click the verification link we sent you.</p>
+                            <div class="verification-actions">
+                                <button class="resend-btn" id="resendBtn">
+                                    <i class="fas fa-redo"></i> Resend Verification Email
+                                </button>
+                                <button class="auth-submit-btn" onclick="checkVerification()">
+                                    <i class="fas fa-sync"></i> Check Verification Status
+                                </button>
+                            </div>
+                            <div class="verification-note">
+                                <p><strong>Note:</strong> If you don't see the email, check your spam folder.</p>
+                            </div>
+                        </div>
+                    `;
+                    
+                    document.getElementById('resendBtn').addEventListener('click', function() {
+                        user.sendEmailVerification().then(() => {
+                            showMessage('Verification email sent! Please check your inbox.', 'success');
+                        }).catch(error => {
+                            showMessage('Error sending verification email: ' + error.message);
+                        });
+                    });
+                }
+            } else {
+                // No user logged in
+                verificationContent.innerHTML = `
+                    <div class="verification-error">
+                        <div class="error-icon">
+                            <i class="fas fa-exclamation-circle"></i>
+                        </div>
+                        <h2>Verification Link Expired</h2>
+                        <p>This verification link has expired or is invalid.</p>
+                        <p>Please request a new verification email or try logging in.</p>
+                        <div class="verification-actions">
+                            <a href="login.html" class="auth-submit-btn">
+                                <i class="fas fa-sign-in-alt"></i> Go to Login
+                            </a>
+                            <a href="register.html" class="register-link-btn">
+                                <i class="fas fa-user-plus"></i> Create New Account
+                            </a>
+                        </div>
+                    </div>
+                `;
+            }
+        });
+
+        function checkVerification() {
+            const user = auth.currentUser;
+            if (user) {
+                user.reload().then(() => {
+                    if (user.emailVerified) {
+                        window.location.reload();
+                    } else {
+                        showMessage('Your email is still not verified. Please check your inbox.', 'error');
+                    }
+                });
+            }
+        }
+
+        function showMessage(message, type = 'error') {
+            // Remove existing message
+            const existingMessage = document.querySelector('.verification-message-alert');
+            if (existingMessage) {
+                existingMessage.remove();
+            }
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.className = type === 'error' ? 'error-message verification-message-alert' : 'success-message verification-message-alert';
+            messageDiv.textContent = message;
+            messageDiv.style.marginBottom = '20px';
+            
+            const verificationContent = document.getElementById('verificationContent');
+            verificationContent.insertBefore(messageDiv, verificationContent.firstChild);
+            
+            setTimeout(() => {
+                messageDiv.remove();
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

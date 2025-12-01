@@ -8,6 +8,11 @@
     <link rel="stylesheet" href="styles/logo.css">
     <link rel="stylesheet" href="styles/auth.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Add Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
 </head>
 <body>
     <!-- Header -->
@@ -20,9 +25,6 @@
                 <h1 class="logo">Foot Locker</h1>
             </div>
             <div class="search-actions-container">
-                <div class="search-bar">
-                    <input type="text" placeholder="Search product..." class="search-input">
-                </div>
                 <div class="user-actions">
                     <a href="login.html" class="auth-btn login-btn">
                         <i class="fas fa-sign-in-alt"></i> Login
@@ -65,71 +67,84 @@
                     Create Account of all users benefits. These payment, brand names address, track your value, exchange rates.
                 </p>
 
-                <form class="auth-form">
+                <!-- Add loading indicator -->
+                <div id="loadingIndicator" class="loading" style="display: none;">
+                    Creating your account...
+                </div>
+                
+                <!-- Add error message display -->
+                <div id="errorMessage" class="error-message" style="display: none;"></div>
+
+                <form class="auth-form" id="registerForm">
                     <div class="form-row">
                         <div class="form-group half-width">
                             <label class="form-label">First Name</label>
-                            <input type="text" class="form-input" placeholder="Enter your first name" required>
+                            <input type="text" class="form-input" id="firstName" placeholder="Enter your first name" required>
                         </div>
                         <div class="form-group half-width">
                             <label class="form-label">Last Name</label>
-                            <input type="text" class="form-input" placeholder="Enter your last name" required>
+                            <input type="text" class="form-input" id="lastName" placeholder="Enter your last name" required>
                         </div>
                     </div>
 
                     <div class="form-row">
                         <div class="form-group half-width">
                             <label class="form-label">Address</label>
-                            <input type="text" class="form-input" placeholder="Enter your Address">
+                            <input type="text" class="form-input" id="address" placeholder="Enter your Address">
                         </div>
-                        
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Phone Number</label>
-                        <div class="phone-input-container">
-                            <span class="phone-prefix">#</span>
-                            <input type="tel" class="form-input phone-input" placeholder="">
+                        <div class="form-group half-width">
+                            <label class="form-label">Phone Number</label>
+                            <div class="phone-input-container">
+                                <span class="phone-prefix">#</span>
+                                <input type="tel" class="form-input phone-input" id="phone" placeholder="Enter your phone number">
+                            </div>
                         </div>
                     </div>
 
                     <div class="form-group">
                         <label class="form-label">Email</label>
-                        <input type="email" class="form-input" placeholder="Enter your email address" required>
+                        <input type="email" class="form-input" id="email" placeholder="Enter your email address" required>
                     </div>
+
 
                     <div class="form-group">
-                        <label class="form-label">Password</label>
-                        <input type="password" class="form-input" placeholder="Enter your password" required>
-                        <div class="password-strength">
-                            Password strength: <span class="strength-text">No Password</span>
-                        </div>
-                    </div>
+    <label class="form-label">Password</label>
+    <div style="position: relative;">
+        <input type="password" class="form-input" id="password" placeholder="Enter your password" required>
+        <span style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #666;" 
+              onclick="togglePasswordVisibility('password')">
+            <i class="fas fa-eye"></i>
+        </span>
+    </div>
+    <div class="password-strength">
+        Password strength: <span class="strength-text">No Password</span>
+    </div>
+</div>
 
-                    <div class="form-group">
-                        <label class="form-label">Confirm Password</label>
-                        <input type="password" class="form-input" placeholder="Confirm your password" required>
-                    </div>
+<div class="form-group">
+    <label class="form-label">Confirm Password</label>
+    <div style="position: relative;">
+        <input type="password" class="form-input" id="confirmPassword" placeholder="Confirm your password" required>
+        <span style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #666;" 
+              onclick="togglePasswordVisibility('confirmPassword')">
+            <i class="fas fa-eye"></i>
+        </span>
+    </div>
+</div>
 
-                    <button type="submit" class="auth-submit-btn">
+                    <button type="submit" class="auth-submit-btn" id="registerBtn">
                         CREATE ACCOUNT
                     </button>
                 </form>
 
-                
-                
-
                 <div class="auth-switch">
                     Already have an account? <a href="login.html" class="switch-link">Login</a>
-                </div>
-
-                <div class="sample-section">
-                    
                 </div>
             </div>
         </div>
     </div>
 
     <script src="js/auth.js"></script>
+    <script src="js/firebase-auth.js"></script>
 </body>
 </html>
