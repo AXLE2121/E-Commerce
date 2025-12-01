@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Sample Products - Admin</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        button { padding: 10px 20px; background: #d50000; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 10px 0; }
+        .status { margin: 20px 0; padding: 10px; border-radius: 4px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; margin: 20px 0; }
+        .product-card { border: 1px solid #ddd; padding: 10px; border-radius: 4px; }
+        .product-card img { width: 100%; height: 150px; object-fit: cover; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Add Sample Products to Firestore</h1>
+        
+        <button onclick="addSampleProducts()">Add 10 Sample Products</button>
+        <button onclick="clearAllProducts()" style="background: #666;">Clear All Products</button>
+        
+        <div id="status" class="status"></div>
+        
+        <h2>Existing Products</h2>
+        <div id="productList" class="product-grid"></div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
+    
+    <script>
+        // Your Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCn721TvxMu3R6JX5fpYTXemZPB6alHQX0",
+            authDomain: "shoehub-711f9.firebaseapp.com",
+            projectId: "shoehub-711f9",
+            storageBucket: "shoehub-711f9.firebasestorage.app",
+            messagingSenderId: "719905522600",
+            appId: "1:719905522600:web:3ad4f4c2213b25a9a5d39d"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // Sample products data
+        const sampleProducts = [
+            {
+                id: "1",
+                brand: "NIKE",
+                name: "Air Jordan 1 Retro High",
+                price: 170,
+                description: "Classic basketball shoes with premium leather construction",
+                gender: "Unisex",
+                category: "Basketball",
+                image: "https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=400&h=300&fit=crop",
+                sizes: ["7", "8", "9", "10", "11", "12"],
+                colors: ["Black/Red", "White/Black", "Blue"],
+                stock: 50,
+                rating: 4.8,
+                reviews: 125,
+                featured: true
+            },
+            {
+                id: "2",
+                brand: "NIKE",
+                name: "Air Force 1 '07",
+                price: 100,
+                description: "The classic basketball shoe with crisp leather and iconic style",
+                gender: "Unisex",
+                category: "Lifestyle",
+                image: "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=400&h=300&fit=crop",
+                sizes: ["6", "7", "8", "9", "10", "11"],
+                colors: ["White", "Black", "Triple White"],
+                stock: 75,
+                rating: 4.7,
+                reviews: 89,
+                featured: true
+            },
+            {
+                id: "3",
+                brand: "ADIDAS",
+                name: "Ultraboost 22",
+                price: 180,
+                description: "Running shoes with responsive cushioning and energy return",
+                gender: "Men",
+                category: "Running",
+                image: "https://images.unsplash.com/photo-1543508282-6319a3e2621f?w=400&h=300&fit=crop",
+                sizes: ["8", "9", "10", "11", "12", "13"],
+                colors: ["Black", "White", "Solar Red"],
+                stock: 40,
+                rating: 4.9,
+                reviews: 210,
+                featured: true
+            },
+            {
+                id: "4",
+                brand: "ADIDAS",
+                name: "Superstar",
+                price: 85,
+                description: "Iconic shell-toe design with rubber shell and serrated 3-Stripes",
+                gender: "Unisex",
+                category: "Lifestyle",
+                image: "https://images.unsplash.com/photo-1551107696-a4b0c5a0d9a2?w=400&h=300&fit=crop",
+                sizes: ["6", "7", "8", "9", "10", "11"],
+                colors: ["White/Black", "Black/White", "Gold"],
+                stock: 60,
+                rating: 4.6,
+                reviews: 156,
+                featured: false
+            },
+            {
+                id: "5",
+                brand: "PUMA",
+                name: "RS-X³ Puzzle",
+                price: 110,
+                description: "Chunky sneaker with multi-layered design and bold colors",
+                gender: "Men",
+                category: "Lifestyle",
+                image: "https://images.unsplash.com/photo-1600185365483-26d7a4cc7519?w=400&h=300&fit=crop",
+                sizes: ["8", "9", "10", "11", "12"],
+                colors: ["Multi-Color", "Black/White", "Blue/Orange"],
+                stock: 35,
+                rating: 4.4,
+                reviews: 78,
+                featured: false
+            },
+            {
+                id: "6",
+                brand: "NEW BALANCE",
+                name: "990v5",
+                price: 175,
+                description: "Made in USA running shoe with premium materials",
+                gender: "Men",
+                category: "Running",
+                image: "https://images.unsplash.com/photo-1542272604-787c3835535d?w=400&h=300&fit=crop",
+                sizes: ["7", "8", "9", "10", "11", "12"],
+                colors: ["Grey", "Navy", "Black"],
+                stock: 25,
+                rating: 4.8,
+                reviews: 92,
+                featured: true
+            },
+            {
+                id: "7",
+                brand: "CONVERSE",
+                name: "Chuck Taylor All Star",
+                price: 65,
+                description: "Classic canvas high-top sneaker with rubber toe cap",
+                gender: "Unisex",
+                category: "Casual",
+                image: "https://images.unsplash.com/photo-1525966222134-fcfa99b8ae77?w=400&h=300&fit=crop",
+                sizes: ["6", "7", "8", "9", "10", "11"],
+                colors: ["Black", "White", "Red"],
+                stock: 100,
+                rating: 4.5,
+                reviews: 345,
+                featured: false
+            },
+            {
+                id: "8",
+                brand: "VANS",
+                name: "Old Skool",
+                price: 70,
+                description: "Classic skate shoes with signature side stripe",
+                gender: "Unisex",
+                category: "Skateboarding",
+                image: "https://images.unsplash.com/photo-1539185441755-769473a23570?w=400&h=300&fit=crop",
+                sizes: ["6", "7", "8", "9", "10", "11"],
+                colors: ["Black/White", "Checkerboard", "Navy"],
+                stock: 80,
+                rating: 4.6,
+                reviews: 234,
+                featured: false
+            },
+            {
+                id: "9",
+                brand: "REEBOK",
+                name: "Classic Leather",
+                price: 75,
+                description: "Vintage-inspired athletic shoes with soft leather upper",
+                gender: "Women",
+                category: "Lifestyle",
+                image: "https://images.unsplash.com/photo-1579338559194-a162d19bf842?w=400&h=300&fit=crop",
+                sizes: ["5", "6", "7", "8", "9"],
+                colors: ["White", "Black", "Pink"],
+                stock: 45,
+                rating: 4.3,
+                reviews: 67,
+                featured: false
+            },
+            {
+                id: "10",
+                brand: "ASICS",
+                name: "GEL-Kayano 28",
+                price: 160,
+                description: "Stability running shoes with GEL technology cushioning",
+                gender: "Men",
+                category: "Running",
+                image: "https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=400&h=300&fit=crop",
+                sizes: ["8", "9", "10", "11", "12", "13"],
+                colors: ["Blue/Silver", "Black/Red", "White/Navy"],
+                stock: 30,
+                rating: 4.7,
+                reviews: 145,
+                featured: true
+            }
+        ];
+
+        // Function to add sample products
+        async function addSampleProducts() {
+            const status = document.getElementById('status');
+            status.textContent = 'Adding products...';
+            status.className = 'status';
+            
+            try {
+                const batch = db.batch();
+                
+                sampleProducts.forEach(product => {
+                    const productRef = db.collection('products').doc(product.id);
+                    batch.set(productRef, {
+                        ...product,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                });
+                
+                await batch.commit();
+                
+                status.textContent = `Successfully added ${sampleProducts.length} products to Firestore!`;
+                status.className = 'status success';
+                
+                // Refresh product list
+                loadProducts();
+                
+            } catch (error) {
+                console.error('Error adding products:', error);
+                status.textContent = `Error: ${error.message}`;
+                status.className = 'status error';
+            }
+        }
+
+        // Function to load existing products
+        async function loadProducts() {
+            try {
+                const snapshot = await db.collection('products').get();
+                const productList = document.getElementById('productList');
+                productList.innerHTML = '';
+                
+                if (snapshot.empty) {
+                    productList.innerHTML = '<p>No products found in database.</p>';
+                    return;
+                }
+                
+                snapshot.docs.forEach(doc => {
+                    const product = doc.data();
+                    const productCard = `
+                        <div class="product-card">
+                            <img src="${product.image}" alt="${product.name}">
+                            <h4>${product.brand}</h4>
+                            <p>${product.name}</p>
+                            <p>$${product.price}</p>
+                            <small>${product.category}</small>
+                        </div>
+                    `;
+                    productList.insertAdjacentHTML('beforeend', productCard);
+                });
+                
+                document.getElementById('status').innerHTML += `<br>Loaded ${snapshot.size} products from database.`;
+                
+            } catch (error) {
+                console.error('Error loading products:', error);
+            }
+        }
+
+        // Function to clear all products (admin only)
+        async function clearAllProducts() {
+            if (!confirm('Are you sure you want to delete ALL products? This cannot be undone.')) {
+                return;
+            }
+            
+            const status = document.getElementById('status');
+            status.textContent = 'Deleting all products...';
+            status.className = 'status';
+            
+            try {
+                const snapshot = await db.collection('products').get();
+                const batch = db.batch();
+                
+                snapshot.docs.forEach(doc => {
+                    batch.delete(doc.ref);
+                });
+                
+                await batch.commit();
+                
+                status.textContent = `Successfully deleted ${snapshot.size} products.`;
+                status.className = 'status success';
+                
+                // Clear product list
+                document.getElementById('productList').innerHTML = '<p>No products found in database.</p>';
+                
+            } catch (error) {
+                console.error('Error deleting products:', error);
+                status.textContent = `Error: ${error.message}`;
+                status.className = 'status error';
+            }
+        }
+
+        // Load existing products when page loads
+        loadProducts();
+    </script>
+</body>
+</html>

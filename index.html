@@ -78,7 +78,7 @@
                     <input type="text" placeholder="Search" class="brand-search" id="brandSearch">
                     <div class="filter-option">
                         <label>
-                            <input type="checkbox" data-filter="brand" value="Nike">
+                            <input type="checkbox" data-filter="brand" value="NIKE">
                             NIKE (382)
                         </label>
                     </div>
@@ -114,44 +114,100 @@
         </main>
     </div>
 
+    
+
     <!-- JavaScript Files -->
-    <script src="js/data.js"></script>
-    <script src="js/components.js"></script>
-    <script src="js/app.js"></script>
     <script src="js/firebase-auth.js"></script>
+    <script src="js/firebase-data.js"></script>
+    <script src="js/components.js"></script>
+    <script src="js/data.js"></script>
+    <script src="js/app.js"></script>
     
     <!-- Add this script for index page specific functionality -->
     <script>
-        // Check if user is logged in and update UI.
-        auth.onAuthStateChanged((user) => {
-            const authButtons = document.getElementById('authButtons');
-            const userInfo = document.getElementById('userInfo');
-            const userEmail = document.getElementById('userEmail');
-            
-            if (user) {
-                // User is signed in
-                console.log('User is logged in on index page:', user.email);
-                if (authButtons) authButtons.style.display = 'none';
-                if (userInfo) userInfo.style.display = 'flex';
-                if (userEmail) userEmail.textContent = user.email;
-            } else {
-                // User is signed out
-                console.log('User is not logged in on index page');
-                if (authButtons) authButtons.style.display = 'flex';
-                if (userInfo) userInfo.style.display = 'none';
-            }
-        });
+    // Check if user is logged in and update UI
+    auth.onAuthStateChanged((user) => {
+        console.log('Auth state changed:', user ? user.email : 'No user');
+        const authButtons = document.getElementById('authButtons');
+        const userInfo = document.getElementById('userInfo');
+        const userEmail = document.getElementById('userEmail');
+        
+        if (user) {
+            // User is signed in
+            console.log('User is logged in on index page:', user.email);
+            if (authButtons) authButtons.style.display = 'none';
+            if (userInfo) userInfo.style.display = 'flex';
+            if (userEmail) userEmail.textContent = user.email;
+        } else {
+            // User is signed out
+            console.log('User is not logged in on index page');
+            if (authButtons) authButtons.style.display = 'flex';
+            if (userInfo) userInfo.style.display = 'none';
+        }
+    });
 
-        // Logout functionality
-        document.getElementById('logoutBtn')?.addEventListener('click', (e) => {
-            e.preventDefault();
-            auth.signOut().then(() => {
-                console.log('User signed out');
-                window.location.reload();
-            }).catch((error) => {
-                console.error('Logout error:', error);
-            });
+    // Logout functionality
+    document.getElementById('logoutBtn')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        auth.signOut().then(() => {
+            console.log('User signed out');
+            window.location.reload();
+        }).catch((error) => {
+            console.error('Logout error:', error);
         });
+    });
+
+    // Test function to manually load products
+    window.testLoadProducts = async function() {
+        console.log('Manual test: Loading products...');
+        await initializeProducts();
+        console.log('Products loaded:', products.length);
+        
+        // Force render
+        if (typeof filterProducts === 'function') {
+            filterProducts();
+        }
+    };
+    </script>
+
+    <script>
+    // Debug: Check Firebase initialization
+    console.log('=== FIREBASE DEBUG INFO ===');
+    console.log('Firebase loaded:', typeof firebase !== 'undefined');
+    console.log('Firebase app initialized:', firebase.apps.length > 0 ? 'YES' : 'NO');
+    
+    if (typeof firebase !== 'undefined') {
+        console.log('Firebase apps:', firebase.apps);
+        console.log('Firebase auth:', typeof firebase.auth);
+        console.log('Firebase firestore:', typeof firebase.firestore);
+        
+        // Check if we can access Firestore
+        try {
+            const db = firebase.firestore();
+            console.log('Firestore available:', db ? 'YES' : 'NO');
+        } catch (error) {
+            console.error('Firestore error:', error);
+        }
+    }
+    </script>
+
+    <script>
+    console.log('=== DEBUG INFO ===');
+    console.log('Firebase initialized:', typeof firebase !== 'undefined');
+    console.log('Firestore available:', typeof firebase.firestore !== 'undefined');
+    console.log('firebaseDataService:', typeof firebaseDataService);
+    console.log('loadProducts function:', typeof loadProducts);
+    console.log('renderProducts function:', typeof renderProducts);
+    
+    // Manual test button
+    window.testProducts = function() {
+        console.log('Testing products...');
+        if (typeof loadProducts === 'function') {
+            loadProducts();
+        } else {
+            console.error('loadProducts not found!');
+        }
+    };
     </script>
 </body>
 </html>

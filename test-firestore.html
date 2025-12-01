@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Firestore Connection</title>
+</head>
+<body>
+    <h1>Test Firestore Connection</h1>
+    <button onclick="testConnection()">Test Connection</button>
+    <div id="result"></div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
+    
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyCn721TvxMu3R6JX5fpYTXemZPB6alHQX0",
+            authDomain: "shoehub-711f9.firebaseapp.com",
+            projectId: "shoehub-711f9",
+            storageBucket: "shoehub-711f9.firebasestorage.app",
+            messagingSenderId: "719905522600",
+            appId: "1:719905522600:web:3ad4f4c2213b25a9a5d39d"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        async function testConnection() {
+            const result = document.getElementById('result');
+            result.innerHTML = 'Testing...';
+            
+            try {
+                // Test 1: Check if Firestore is accessible
+                console.log('Testing Firestore connection...');
+                
+                // Test 2: Try to get products collection
+                const snapshot = await db.collection('products').get();
+                
+                if (snapshot.empty) {
+                    result.innerHTML = `
+                        <p style="color: orange;">✅ Firestore connected successfully!</p>
+                        <p>But no products found in the database.</p>
+                        <p>You need to add products to Firestore first.</p>
+                    `;
+                } else {
+                    result.innerHTML = `
+                        <p style="color: green;">✅ Firestore connected successfully!</p>
+                        <p>Found ${snapshot.size} products in database.</p>
+                        <ul>
+                            ${snapshot.docs.map(doc => `<li>${doc.data().name} - $${doc.data().price}</li>`).join('')}
+                        </ul>
+                    `;
+                }
+                
+            } catch (error) {
+                console.error('Connection error:', error);
+                result.innerHTML = `
+                    <p style="color: red;">❌ Error connecting to Firestore:</p>
+                    <p>${error.message}</p>
+                    <p>Check your Firestore rules and database setup.</p>
+                `;
+            }
+        }
+
+        // Auto-test on load
+        window.onload = testConnection;
+    </script>
+</body>
+</html>

@@ -1,0 +1,57 @@
+/* Add to style.css or auth.css */
+.login-required-message {
+    text-align: center;
+    padding: 40px 20px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.login-required-message .fa-lock {
+    font-size: 48px;
+    color: #d50000;
+    margin-bottom: 20px;
+}
+
+.login-required-message h3 {
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.login-required-message p {
+    color: #666;
+    margin-bottom: 20px;
+}
+
+.message-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.message-actions .action-btn {
+    padding: 10px 20px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.message-actions .action-btn.primary {
+    background: #d50000;
+    color: white;
+}
+
+.message-actions .action-btn.secondary {
+    background: #333;
+    color: white;
+}
+
+.message-actions .action-btn:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}

@@ -1,12 +1,6 @@
-// Initialize the application
+// app.js - Simple initialization
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Foot Locker App Initialized');
-    
-    // Initialize event listeners
-    initializeEventListeners();
-    
-    // Render initial products
-    filterProducts();
     
     // Add some interactive features
     addInteractiveFeatures();
@@ -19,11 +13,7 @@ function addInteractiveFeatures() {
         const productCard = e.target.closest('.product-card');
         if (productCard) {
             const productId = productCard.dataset.productId;
-            const product = products.find(p => p.id === parseInt(productId));
-            if (product) {
-                alert(`Selected: ${product.brand} - ${product.name}\nPrice: $${product.price}`);
-                // You can replace this with a modal or product detail page
-            }
+            alert(`Product ID: ${productId}\nClick handled!`);
         }
     });
 
@@ -39,7 +29,3 @@ function addInteractiveFeatures() {
         });
     });
 }
-
-// Make functions globally available for HTML onclick handlers
-window.clearFilters = clearFilters;
-//hehe

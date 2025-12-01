@@ -8,6 +8,11 @@
     <link rel="stylesheet" href="styles/favorites.css">
     <link rel="stylesheet" href="styles/logo.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Add Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
 </head>
 <body>
     <!-- Header -->
@@ -28,13 +33,21 @@
                 
                 <!-- User Actions -->
                 <div class="user-actions">
-                    <div class="auth-buttons">
+                    <div class="auth-buttons" id="authButtons">
                         <a href="login.html" class="auth-btn login-btn">
                             <i class="fas fa-sign-in-alt"></i> Login
                         </a>
                         <span class="auth-separator">|</span>
                         <a href="register.html" class="auth-btn register-btn">
                             <i class="fas fa-user-plus"></i> Register
+                        </a>
+                    </div>
+                    
+                    <!-- Add User Info for logged-in users -->
+                    <div class="user-info" id="userInfo" style="display: none;">
+                        <span class="user-email" id="userEmail"></span>
+                        <a href="#" class="auth-btn logout-btn" id="logoutBtn">
+                            <i class="fas fa-sign-out-alt"></i> Logout
                         </a>
                     </div>
                     
@@ -52,14 +65,10 @@
                 </div>
             </div>
         </div>
-        
-        
     </header>
 
     <!-- Main Content -->
     <div class="favorites-main-container">
-        
-
         <!-- Favorites Content -->
         <div class="favorites-container">
             <!-- Favorites Sidebar -->
@@ -77,8 +86,6 @@
                         </div>
                     </div>
                 </div>
-
-                
             </aside>
 
             <!-- Favorites Products -->
@@ -89,11 +96,11 @@
                         <p>Items you've saved for later</p>
                     </div>
                     <div class="favorites-actions">
-                        <button class="action-btn clear-all">
+                        <button class="action-btn clear-all" id="clearAllBtn">
                             <i class="fas fa-trash"></i>
                             Clear All
                         </button>
-                        <button class="action-btn move-to-cart">
+                        <button class="action-btn move-to-cart" id="moveToCartBtn">
                             <i class="fas fa-shopping-cart"></i>
                             Add All to Cart
                         </button>
@@ -119,7 +126,24 @@
     </div>
 
     <!-- JavaScript Files -->
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCn721TvxMu3R6JX5fpYTXemZPB6alHQX0",
+            authDomain: "shoehub-711f9.firebaseapp.com",
+            projectId: "shoehub-711f9",
+            storageBucket: "shoehub-711f9.firebasestorage.app",
+            messagingSenderId: "719905522600",
+            appId: "1:719905522600:web:3ad4f4c2213b25a9a5d39d"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+    </script>
     <script src="js/data.js"></script>
     <script src="js/favorites.js"></script>
+    <script src="js/auth-check.js"></script>
+    <script src="js/firebase-data.js"></script>
+    <script src="js/data.js"></script>
 </body>
 </html>
