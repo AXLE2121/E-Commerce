@@ -12,6 +12,7 @@
     <!-- Add Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
 </head>
 <body>
     <!-- Header -->
@@ -55,6 +56,7 @@
         // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
+        const db = firebase.firestore();
 
         // Check verification status
         auth.onAuthStateChanged((user) => {
@@ -82,10 +84,11 @@
                     `;
                     
                     // Update user data in Firestore if needed
-                    const db = firebase.firestore();
                     db.collection('users').doc(user.uid).update({
                         emailVerified: true,
                         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    }).catch(error => {
+                        console.error("Error updating user verification status:", error);
                     });
                 } else {
                     // Email not verified yet
@@ -120,7 +123,7 @@
                     });
                 }
             } else {
-                // No user logged in
+                // No user logged in - Link expired or invalid
                 verificationContent.innerHTML = `
                     <div class="verification-error">
                         <div class="error-icon">
@@ -128,9 +131,23 @@
                         </div>
                         <h2>Verification Link Expired</h2>
                         <p>This verification link has expired or is invalid.</p>
-                        <p>Please request a new verification email or try logging in.</p>
-                        <div class="verification-actions">
-                            <a href="login.html" class="auth-submit-btn">
+                        <p>Please enter your email address to resend the verification link.</p>
+                        
+                        <div class="resend-verification-form" style="margin: 25px 0;">
+                            <div class="form-group">
+                                <label for="emailInput" class="form-label">Email Address</label>
+                                <input type="email" id="emailInput" class="form-input" placeholder="Enter your email address" required>
+                            </div>
+                            <button class="auth-submit-btn" id="resendVerificationBtn" style="margin-top: 15px;">
+                                <i class="fas fa-paper-plane"></i> Resend Verification Link
+                            </button>
+                            <div id="resendMessage" style="margin-top: 15px; display: none;"></div>
+                        </div>
+                        
+                        <p style="margin-top: 25px; color: #666; font-size: 14px;">Or you can:</p>
+                        
+                        <div class="verification-actions" style="margin-top: 20px;">
+                            <a href="login.html" class="auth-submit-btn" style="background: #757575;">
                                 <i class="fas fa-sign-in-alt"></i> Go to Login
                             </a>
                             <a href="register.html" class="register-link-btn">
@@ -139,6 +156,16 @@
                         </div>
                     </div>
                 `;
+                
+                // Add event listener for resend button
+                document.getElementById('resendVerificationBtn').addEventListener('click', resendVerificationEmail);
+                
+                // Allow pressing Enter in email input
+                document.getElementById('emailInput').addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        resendVerificationEmail();
+                    }
+                });
             }
         });
 
@@ -152,6 +179,100 @@
                         showMessage('Your email is still not verified. Please check your inbox.', 'error');
                     }
                 });
+            }
+        }
+
+        async function resendVerificationEmail() {
+            const emailInput = document.getElementById('emailInput');
+            const email = emailInput.value.trim();
+            const resendBtn = document.getElementById('resendVerificationBtn');
+            const messageDiv = document.getElementById('resendMessage');
+            
+            if (!email) {
+                showMessageInline('Please enter your email address.', 'error');
+                return;
+            }
+            
+            if (!validateEmail(email)) {
+                showMessageInline('Please enter a valid email address.', 'error');
+                return;
+            }
+            
+            // Show loading state
+            const originalText = resendBtn.innerHTML;
+            resendBtn.disabled = true;
+            resendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+            
+            try {
+                // Try to sign in with email (to get the user)
+                await auth.signInWithEmailAndPassword(email, 'temporary_password').catch(async (error) => {
+                    if (error.code === 'auth/wrong-password') {
+                        // This is expected - we just need to get the user
+                        // Try to get user by email
+                        try {
+                            // Try to create a temporary user to get access (this won't work for existing users)
+                            // Instead, we need to use Firebase Admin SDK on backend or another approach
+                            // For now, we'll show a generic message
+                            throw new Error('Cannot send verification email without password. Please log in first.');
+                        } catch (innerError) {
+                            throw innerError;
+                        }
+                    } else if (error.code === 'auth/user-not-found') {
+                        throw new Error('No account found with this email address.');
+                    } else {
+                        throw error;
+                    }
+                });
+                
+                // If we got here, user exists
+                const user = auth.currentUser;
+                
+                // Sign out immediately (we don't want to stay logged in)
+                await auth.signOut();
+                
+                // Send verification email
+                await user.sendEmailVerification();
+                
+                showMessageInline('Verification email sent successfully! Please check your inbox.', 'success');
+                
+            } catch (error) {
+                console.error("Error resending verification:", error);
+                
+                if (error.message.includes('without password') || error.code === 'auth/wrong-password') {
+                    // User exists but we can't send verification without logging in
+                    showMessageInline('Please log in to your account first, then request a new verification email from your account settings.', 'error');
+                } else if (error.code === 'auth/user-not-found') {
+                    showMessageInline('No account found with this email address. Please check the email or create a new account.', 'error');
+                } else if (error.code === 'auth/too-many-requests') {
+                    showMessageInline('Too many attempts. Please try again later.', 'error');
+                } else {
+                    showMessageInline('Error: ' + error.message, 'error');
+                }
+            } finally {
+                // Reset button state
+                resendBtn.disabled = false;
+                resendBtn.innerHTML = originalText;
+            }
+        }
+
+        function validateEmail(email) {
+            const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return re.test(email);
+        }
+
+        function showMessageInline(message, type = 'error') {
+            const messageDiv = document.getElementById('resendMessage');
+            if (!messageDiv) return;
+            
+            messageDiv.textContent = message;
+            messageDiv.className = type === 'error' ? 'error-message' : 'success-message';
+            messageDiv.style.display = 'block';
+            
+            // Auto-hide success messages after 5 seconds
+            if (type === 'success') {
+                setTimeout(() => {
+                    messageDiv.style.display = 'none';
+                }, 5000);
             }
         }
 

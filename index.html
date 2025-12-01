@@ -47,6 +47,11 @@
                         <a href="#" class="auth-btn logout-btn" id="logoutBtn">
                             <i class="fas fa-sign-out-alt"></i> Logout
                         </a>
+                        
+                        <a href="admin.html" class="auth-btn admin-btn" id="adminBtn" style="display: none;">
+                             <i class="fas fa-cog"></i> Admin
+                         </a>
+
                     </div>
                     
                     <div class="action-icons">
@@ -126,24 +131,36 @@
     <!-- Add this script for index page specific functionality -->
     <script>
     // Check if user is logged in and update UI
-    auth.onAuthStateChanged((user) => {
-        console.log('Auth state changed:', user ? user.email : 'No user');
-        const authButtons = document.getElementById('authButtons');
-        const userInfo = document.getElementById('userInfo');
-        const userEmail = document.getElementById('userEmail');
+   auth.onAuthStateChanged(async (user) => {
+    console.log('Auth state changed:', user ? user.email : 'No user');
+    const authButtons = document.getElementById('authButtons');
+    const userInfo = document.getElementById('userInfo');
+    const userEmail = document.getElementById('userEmail');
+    const adminBtn = document.getElementById('adminBtn');
+    
+    if (user) {
+        // User is signed in
+        console.log('User is logged in on index page:', user.email);
+        if (authButtons) authButtons.style.display = 'none';
+        if (userInfo) userInfo.style.display = 'flex';
+        if (userEmail) userEmail.textContent = user.email;
         
-        if (user) {
-            // User is signed in
-            console.log('User is logged in on index page:', user.email);
-            if (authButtons) authButtons.style.display = 'none';
-            if (userInfo) userInfo.style.display = 'flex';
-            if (userEmail) userEmail.textContent = user.email;
-        } else {
-            // User is signed out
-            console.log('User is not logged in on index page');
-            if (authButtons) authButtons.style.display = 'flex';
-            if (userInfo) userInfo.style.display = 'none';
+        // Check if user is admin and show admin button
+        try {
+            const isAdmin = await checkIfUserIsAdmin(user.uid);
+            if (adminBtn && isAdmin) {
+                adminBtn.style.display = 'inline-block';
+            }
+        } catch (error) {
+            console.error('Error checking admin status:', error);
         }
+    } else {
+        // User is signed out
+        console.log('User is not logged in on index page');
+        if (authButtons) authButtons.style.display = 'flex';
+        if (userInfo) userInfo.style.display = 'none';
+        if (adminBtn) adminBtn.style.display = 'none';
+    }
     });
 
     // Logout functionality

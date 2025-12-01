@@ -17,7 +17,7 @@ class FirebaseDataService {
                 id: doc.id,  // Use Firestore document ID
                 ...doc.data()
             }));
-            console.log('Firestore products loaded:', products);
+            console.log('Firestore products loaded:', products.length);
             return products;
         } catch (error) {
             console.error('Error getting products:', error);
@@ -90,6 +90,47 @@ class FirebaseDataService {
             return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         } catch (error) {
             console.error('Error getting featured products:', error);
+            throw error;
+        }
+    }
+
+    // Add new product (Admin function)
+    async addProduct(productData) {
+        try {
+            const productRef = await this.db.collection(this.productsCollection).add({
+                ...productData,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            console.log('Product added with ID:', productRef.id);
+            return { id: productRef.id, ...productData };
+        } catch (error) {
+            console.error('Error adding product:', error);
+            throw error;
+        }
+    }
+
+    // Update product (Admin function)
+    async updateProduct(productId, productData) {
+        try {
+            await this.db.collection(this.productsCollection).doc(productId).update({
+                ...productData,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            return true;
+        } catch (error) {
+            console.error('Error updating product:', error);
+            throw error;
+        }
+    }
+
+    // Delete product (Admin function)
+    async deleteProduct(productId) {
+        try {
+            await this.db.collection(this.productsCollection).doc(productId).delete();
+            return true;
+        } catch (error) {
+            console.error('Error deleting product:', error);
             throw error;
         }
     }
@@ -295,6 +336,117 @@ class FirebaseDataService {
             return true;
         } catch (error) {
             console.error('Error updating user profile:', error);
+            throw error;
+        }
+    }
+
+    // Get all users (Admin function)
+    async getAllUsers() {
+        try {
+            const snapshot = await this.db.collection(this.usersCollection).get();
+            return snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+        } catch (error) {
+            console.error('Error getting users:', error);
+            throw error;
+        }
+    }
+
+    // Update user role (Admin function)
+    async updateUserRole(userId, role) {
+        try {
+            await this.db.collection(this.usersCollection).doc(userId).update({
+                role: role,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            return true;
+        } catch (error) {
+            console.error('Error updating user role:', error);
+            throw error;
+        }
+    }
+
+    // ========== ADMIN FUNCTIONS ==========
+    async checkIfUserIsAdmin(userId) {
+        try {
+            const userDoc = await this.db.collection(this.usersCollection).doc(userId).get();
+            
+            if (userDoc.exists) {
+                const userData = userDoc.data();
+                return userData.role === 'admin' || userData.email === 'admin@footlocker.com';
+            }
+            
+            // Check if current user is admin by email
+            const user = this.auth.currentUser;
+            if (user && user.email === 'admin@footlocker.com') {
+                return true;
+            }
+            
+            return false;
+        } catch (error) {
+            console.error('Error checking admin status:', error);
+            return false;
+        }
+    }
+
+    // Get dashboard statistics (Admin function)
+    async getDashboardStats() {
+        try {
+            const [productsSnapshot, usersSnapshot, ordersSnapshot] = await Promise.all([
+                this.db.collection(this.productsCollection).get(),
+                this.db.collection(this.usersCollection).get(),
+                this.db.collection('orders').get().catch(() => ({ size: 0 })) // orders might not exist
+            ]);
+            
+            let totalRevenue = 0;
+            if (ordersSnapshot.size > 0) {
+                ordersSnapshot.forEach(doc => {
+                    const order = doc.data();
+                    totalRevenue += order.total || 0;
+                });
+            }
+            
+            return {
+                totalProducts: productsSnapshot.size,
+                totalUsers: usersSnapshot.size,
+                totalOrders: ordersSnapshot.size || 0,
+                totalRevenue: totalRevenue
+            };
+        } catch (error) {
+            console.error('Error getting dashboard stats:', error);
+            throw error;
+        }
+    }
+
+    // Get recent products (Admin function)
+    async getRecentProducts(limit = 5) {
+        try {
+            const snapshot = await this.db.collection(this.productsCollection)
+                .orderBy('createdAt', 'desc')
+                .limit(limit)
+                .get();
+            return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        } catch (error) {
+            console.error('Error getting recent products:', error);
+            throw error;
+        }
+    }
+
+    // Bulk delete products (Admin function)
+    async bulkDeleteProducts(productIds) {
+        try {
+            const batch = this.db.batch();
+            productIds.forEach(productId => {
+                const productRef = this.db.collection(this.productsCollection).doc(productId);
+                batch.delete(productRef);
+            });
+            
+            await batch.commit();
+            return true;
+        } catch (error) {
+            console.error('Error bulk deleting products:', error);
             throw error;
         }
     }

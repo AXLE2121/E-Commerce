@@ -1,29 +1,3 @@
-//*<script type="module">
-  // Import the functions you need from the SDKs you need
-  //import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
- // import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-analytics.js";
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
-
-  // Your web app's Firebase configuration
-  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-  //const firebaseConfig = {
-   // apiKey: "AIzaSyCn721TvxMu3R6JX5fpYTXemZPB6alHQX0",
-   // authDomain: "shoehub-711f9.firebaseapp.com",
-   // projectId: "shoehub-711f9",
-    //storageBucket: "shoehub-711f9.firebasestorage.app",
-    //messagingSenderId: "719905522600",
-   //appId: "1:719905522600:web:3ad4f4c2213b25a9a5d39d",
-   // measurementId: "G-Y01KQVE1GE"
- // };
-
-  // Initialize Firebase
- // const app = initializeApp(firebaseConfig);
- // const analytics = getAnalytics(app);
-//</script>
-
-
-
 // firebase-auth.js
 // Firebase configuration - REPLACE WITH YOUR ACTUAL CONFIG
 const firebaseConfig = {
@@ -143,6 +117,33 @@ function validatePassword(password) {
     return password.length >= 6;
 }
 
+// Check if user is admin
+async function checkIfAdmin(userId) {
+    try {
+        // Method 1: Check user document in Firestore
+        const userDoc = await db.collection('users').doc(userId).get();
+        
+        if (userDoc.exists) {
+            const userData = userDoc.data();
+            // Check if user has admin role or is the default admin email
+            if (userData.role === 'admin' || userData.email === 'admin@footlocker.com') {
+                return true;
+            }
+        }
+        
+        // Method 2: Check against admin email list (for development)
+        const user = auth.currentUser;
+        if (user && user.email === 'admin@footlocker.com') {
+            return true;
+        }
+        
+        return false;
+    } catch (error) {
+        console.error("Error checking admin status:", error);
+        return false;
+    }
+}
+
 // ========== LOGIN FUNCTIONALITY ==========
 if (loginForm && emailInput && passwordInput && loginBtn) {
     console.log('Login form elements found');
@@ -153,37 +154,41 @@ if (loginForm && emailInput && passwordInput && loginBtn) {
         setLoading(true, loginBtn);
         
         auth.signInWithEmailAndPassword(email, password)
-           // In the login function, add email verification check
-.then((userCredential) => {
-    // Signed in successfully
-    const user = userCredential.user;
-    console.log('✅ Login successful for user:', user.email);
-    
-    // Check if email is verified
-    if (!user.emailVerified) {
-        // If email not verified, show message and sign out
-        showMessage('Please verify your email address before logging in. Check your inbox for the verification email.', 'error');
-        return auth.signOut().then(() => {
-            setLoading(false, loginBtn);
-            // Optionally redirect to verification page
-            setTimeout(() => {
-                window.location.href = 'verify-email.html';
-            }, 3000);
-        });
-    }
-    
-    // If email is verified, proceed with login
-    console.log('✅ Email verified, proceeding to redirect...');
-    
-    // Show success message
-    showMessage('Login successful! Redirecting...', 'success');
-    
-    // Wait a moment to show the success message, then redirect
-    setTimeout(() => {
-        console.log('🔄 Redirecting to index.html...');
-        window.location.href = 'index.html';
-    }, 1500);
-})
+            .then(async (userCredential) => {
+                // Signed in successfully
+                const user = userCredential.user;
+                console.log('✅ Login successful for user:', user.email);
+                
+                // Check if email is verified
+                if (!user.emailVerified) {
+                    // If email not verified, show message and sign out
+                    showMessage('Please verify your email address before logging in. Check your inbox for the verification email.', 'error');
+                    return auth.signOut().then(() => {
+                        setLoading(false, loginBtn);
+                        // Optionally redirect to verification page
+                        setTimeout(() => {
+                            window.location.href = 'verify-email.html';
+                        }, 3000);
+                    });
+                }
+                
+                // Check if user is admin
+                const isAdmin = await checkIfAdmin(user.uid);
+                
+                // Show success message
+                showMessage('Login successful! Redirecting...', 'success');
+                
+                // Wait a moment to show the success message, then redirect
+                setTimeout(() => {
+                    if (isAdmin) {
+                        console.log('🔄 Admin user detected, redirecting to admin panel...');
+                        window.location.href = 'admin.html';
+                    } else {
+                        console.log('🔄 Regular user, redirecting to homepage...');
+                        window.location.href = 'index.html';
+                    }
+                }, 1500);
+            })
             .catch((error) => {
                 setLoading(false, loginBtn);
                 console.error('❌ Login error:', error);
@@ -258,6 +263,7 @@ if (registerForm) {
             phone: userData.phone,
             email: userData.email,
             emailVerified: false,
+            role: 'user', // Default role is 'user'
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
