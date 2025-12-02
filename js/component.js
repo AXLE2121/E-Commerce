@@ -552,3 +552,19 @@ window.clearFilters = clearFilters;
 window.toggleFavorite = toggleFavorite;
 window.addToCart = addToCart;
 window.quickViewProduct = quickViewProduct;
+
+// Add this function to make product cards clickable
+function makeProductCardsClickable() {
+    document.addEventListener('click', function(e) {
+        const productCard = e.target.closest('.product-card');
+        if (productCard) {
+            const productId = productCard.dataset.productId;
+            if (productId) {
+                window.location.href = `product.html?id=${productId}`;
+            }
+        }
+    });
+}
+
+// Call this in your initialization
+makeProductCardsClickable();
