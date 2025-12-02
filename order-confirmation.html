@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Confirmation - Foot Locker</title>
+    <link rel="stylesheet" href="styles/style.css">
+    <link rel="stylesheet" href="styles/checkout.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
+    
+    <!-- Firebase Configuration and Initialization -->
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCn721TvxMu3R6JX5fpYTXemZPB6alHQX0",
+            authDomain: "shoehub-711f9.firebaseapp.com",
+            projectId: "shoehub-711f9",
+            storageBucket: "shoehub-711f9.firebasestorage.app",
+            messagingSenderId: "719905522600",
+            appId: "1:719905522600:web:3ad4f4c2213b25a5a5d39d"
+        };
+
+        // Initialize Firebase
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if Firebase is already initialized
+            if (!firebase.apps.length) {
+                firebase.initializeApp(firebaseConfig);
+                console.log('Firebase initialized in order-confirmation.html');
+            } else {
+                console.log('Firebase already initialized');
+            }
+        });
+    </script>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-top">
+            <div class="logo-container">
+                <a href="index.html" style="text-decoration: none; color: inherit; display: flex; align-items: center; gap: 10px;">
+                    <img src="images/logo.png" alt="Foot Locker Logo" class="logo-img">
+                    <h1 class="logo">Foot Locker</h1>
+                </a>
+            </div>
+            <div class="search-actions-container">
+                <div class="user-actions">
+                    <div class="action-icons">
+                        <a href="cart.html" class="icon-btn cart-btn">
+                            <i class="fas fa-shopping-cart"></i>
+                            <span class="icon-badge" id="cartCount">0</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="container" style="max-width: 800px; margin: 0 auto; padding: 40px 20px;">
+        <div class="confirmation-container" id="confirmationContainer">
+            <!-- Content will be loaded dynamically -->
+            <div style="text-align: center; padding: 40px;">
+                <i class="fas fa-spinner fa-spin fa-3x" style="color: #d50000; margin-bottom: 20px;"></i>
+                <p>Loading order confirmation...</p>
+            </div>
+        </div>
+        
+    </div>
+
+    <script src="js/order-confirmation.js"></script>
+</body>
+</html>

@@ -445,6 +445,24 @@ async function processCheckout() {
             gcashPhoneNumber = '+63' + gcashPhone;
         }
     }
+
+    sessionStorage.setItem('lastOrderData', JSON.stringify(order));
+sessionStorage.setItem('lastOrderId', order.orderId);
+localStorage.setItem(`order_${order.orderId}`, JSON.stringify(order));
+
+// Also save the product separately for immediate display
+const productData = {
+    product: checkoutData.product,
+    customer: order.customer,
+    totals: order.totals,
+    orderId: order.orderId
+};
+sessionStorage.setItem('checkoutProduct', JSON.stringify(productData));
+
+     // Get selected size
+    const selectedSize = checkoutData.product.size || 'Not selected';
+
+
     
     // Create order object
     const order = {
@@ -484,6 +502,8 @@ async function processCheckout() {
         // Save order to Firestore
         const orderRef = await db.collection('orders').add(order);
         console.log('Order saved with ID:', orderRef.id);
+
+           await db.collection('users').doc(user.uid).collection('orders').doc(order.orderId).set(order);
         
         // Clear checkout data
         sessionStorage.removeItem('checkoutProduct');

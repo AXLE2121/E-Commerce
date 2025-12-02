@@ -371,6 +371,32 @@ if (registerForm) {
         });
     }
 
+        document.addEventListener('DOMContentLoaded', function() {
+    // Wait for Firebase to initialize
+    setTimeout(() => {
+        if (firebase.auth) {
+            // Set persistence to LOCAL (remembers user across tabs/sessions)
+            firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+                .then(() => {
+                    console.log('✅ Auth persistence set to LOCAL');
+                    
+                    // Check current auth state
+                    firebase.auth().onAuthStateChanged((user) => {
+                        if (user) {
+                            console.log('✅ User is authenticated:', user.email);
+                            console.log('✅ User UID:', user.uid);
+                        } else {
+                            console.log('⚠️ No user authenticated');
+                        }
+                    });
+                })
+                .catch((error) => {
+                    console.error('❌ Error setting auth persistence:', error);
+                });
+        }
+    }, 500);
+});
+
     // Form submission handler for registration
     registerForm.addEventListener('submit', (e) => {
         e.preventDefault();
