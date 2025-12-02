@@ -1,4 +1,4 @@
-// data.js - Complete Firestore integration
+// data.js - Complete Firestore integration with Clickable Products
 console.log('data.js loaded - Firestore version');
 
 let products = [];
@@ -186,12 +186,20 @@ function renderProductsToDOM(filteredProducts) {
         const productCard = createProductCard(product);
         productGrid.innerHTML += productCard;
     });
+    
+    // After rendering, attach click events to product cards
+    attachProductCardClickEvents();
 }
 
-// Create product card HTML
+// Create product card HTML - SIMPLIFIED VERSION
 function createProductCard(product) {
     const user = firebase.auth().currentUser;
     const isLoggedIn = !!user;
+    
+    // Format price to match the screenshot (P4,995.00 format)
+    const formattedPrice = product.price ? 
+        `P${product.price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}` : 
+        'P0.00';
     
     return `
         <div class="product-card" data-product-id="${product.id}">
@@ -212,14 +220,73 @@ function createProductCard(product) {
                 <h3 class="product-name">${product.name || 'Product Name'}</h3>
                 <p class="product-desc">${product.description ? (product.description.substring(0, 60) + (product.description.length > 60 ? '...' : '')) : 'No description available'}</p>
                 <div class="product-footer">
-                    <div class="product-price">$${(product.price || 0).toFixed(2)}</div>
-                    <button class="add-to-cart-btn" onclick="addToCart('${product.id}')" ${!isLoggedIn ? 'disabled style="opacity: 0.5; cursor: not-allowed;" title="Login to Add to Cart"' : ''}>
+                    <div class="product-price">${formattedPrice}</div>
+                    <button class="add-to-cart-btn" data-product-id="${product.id}" ${!isLoggedIn ? 'disabled style="opacity: 0.5; cursor: not-allowed;" title="Login to Add to Cart"' : ''}>
                         <i class="fas fa-shopping-cart"></i> Add to Cart
                     </button>
                 </div>
             </div>
         </div>
     `;
+}
+
+// Attach click events to product cards
+function attachProductCardClickEvents() {
+    const productCards = document.querySelectorAll('.product-card');
+    
+    console.log(`Attaching click events to ${productCards.length} product cards...`);
+    
+    productCards.forEach(card => {
+        // Remove existing event listeners to avoid duplicates
+        const newCard = card.cloneNode(true);
+        card.parentNode.replaceChild(newCard, card);
+        
+        // Add click event to the new card
+        newCard.addEventListener('click', function(event) {
+            // Don't navigate if clicking on the add to cart button
+            if (event.target.closest('.add-to-cart-btn')) {
+                return;
+            }
+            
+            const productId = this.getAttribute('data-product-id');
+            if (productId) {
+                console.log('Product clicked, navigating to:', productId);
+                navigateToViewProduct(productId);
+            }
+        });
+        
+        // Add hover effects
+        newCard.style.cursor = 'pointer';
+        newCard.style.transition = 'transform 0.2s, box-shadow 0.2s';
+        
+        newCard.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-5px)';
+            this.style.boxShadow = '0 10px 20px rgba(0,0,0,0.1)';
+        });
+        
+        newCard.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+            this.style.boxShadow = 'none';
+        });
+    });
+    
+    // Attach click events to add to cart buttons
+    const addToCartButtons = document.querySelectorAll('.add-to-cart-btn');
+    addToCartButtons.forEach(button => {
+        button.addEventListener('click', function(event) {
+            event.stopPropagation(); // Prevent card click when button is clicked
+            const productId = this.getAttribute('data-product-id');
+            if (productId) {
+                addToCart(productId);
+            }
+        });
+    });
+}
+
+// Navigate to viewProduct.html
+function navigateToViewProduct(productId) {
+    console.log('Navigating to viewProduct.html with ID:', productId);
+    window.location.href = `viewProduct.html?id=${productId}`;
 }
 
 // Initialize event listeners
@@ -334,8 +401,88 @@ function addToCart(productId) {
         return;
     }
     
-    alert(`Added product ${productId} to cart!`);
-    // Here you would typically call firebaseDataService.addToCart()
+    // Use Firebase Data Service if available
+    if (typeof firebaseDataService !== 'undefined' && firebaseDataService.addToCart) {
+        firebaseDataService.addToCart(user.uid, productId)
+            .then(() => {
+                showMessage('Added to cart successfully!', 'success');
+                updateCartCount();
+            })
+            .catch(error => {
+                console.error('Error adding to cart:', error);
+                showMessage('Error adding to cart', 'error');
+            });
+    } else {
+        showMessage('Added to cart!', 'success');
+    }
+}
+
+// Update cart count
+async function updateCartCount() {
+    const user = firebase.auth().currentUser;
+    if (!user) return;
+    
+    try {
+        if (typeof firebaseDataService !== 'undefined' && firebaseDataService.getUserCart) {
+            const cartItems = await firebaseDataService.getUserCart(user.uid);
+            const totalItems = cartItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
+            
+            // Update cart badges
+            document.querySelectorAll('.cart-btn .icon-badge').forEach(badge => {
+                badge.textContent = totalItems;
+            });
+        }
+    } catch (error) {
+        console.error('Error updating cart count:', error);
+    }
+}
+
+// Show message function
+function showMessage(message, type = 'success') {
+    // Remove existing message
+    const existingMsg = document.querySelector('.global-message');
+    if (existingMsg) existingMsg.remove();
+    
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `global-message ${type}`;
+    messageDiv.textContent = message;
+    messageDiv.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 12px 20px;
+        border-radius: 6px;
+        color: white;
+        font-weight: 500;
+        z-index: 1000;
+        animation: slideInRight 0.3s ease;
+        ${type === 'success' ? 'background: #4caf50;' : 'background: #f44336;'}
+    `;
+    
+    // Add animation styles if not present
+    if (!document.querySelector('#messageAnimations')) {
+        const styleSheet = document.createElement('style');
+        styleSheet.id = 'messageAnimations';
+        styleSheet.textContent = `
+            @keyframes slideInRight {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            
+            @keyframes slideOutRight {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(100%); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(styleSheet);
+    }
+    
+    document.body.appendChild(messageDiv);
+    
+    setTimeout(() => {
+        messageDiv.style.animation = 'slideOutRight 0.3s ease';
+        setTimeout(() => messageDiv.remove(), 300);
+    }, 3000);
 }
 
 // Sample data for fallback
@@ -344,54 +491,70 @@ function getSampleProducts() {
         {
             id: "1",
             brand: "NIKE",
-            name: "Air Jordan 1 Retro High",
-            price: 170.00,
-            description: "Classic basketball shoes with premium leather construction",
-            gender: "Unisex",
-            category: "Basketball",
+            name: "P-6000 Men's Sneakers Shoes - Phantom",
+            price: 4995.00,
+            description: "Modern sneakers with retro design elements, perfect for everyday wear. Features responsive cushioning and durable materials.",
+            gender: "Men",
+            category: "Sneakers",
             image: "https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=400&h=300&fit=crop",
-            rating: 4.8,
-            reviews: 125,
-            featured: true
+            rating: 4.7,
+            reviews: 140,
+            featured: true,
+            stock: 15,
+            sizes: ["8", "9", "9.5", "10", "11", "12"],
+            colors: ["Phantom", "Black", "White"],
+            sku: "0803-NIKCD6404018"
         },
         {
             id: "2",
             brand: "ADIDAS",
-            name: "Ultraboost 22",
-            price: 180.00,
-            description: "Running shoes with responsive cushioning and energy return",
-            gender: "Men",
+            name: "Ultraboost 22 Running Shoes",
+            price: 5495.00,
+            description: "Premium running shoes with Boost technology for maximum energy return and comfort.",
+            gender: "Unisex",
             category: "Running",
-            image: "https://images.unsplash.com/photo-1543508282-6319a3e2621f?w-400&h=300&fit=crop",
+            image: "https://images.unsplash.com/photo-1543508282-6319a3e2621f?w=400&h=300&fit=crop",
             rating: 4.9,
             reviews: 210,
-            featured: true
+            featured: true,
+            stock: 8,
+            sizes: ["7", "8", "9", "10", "11"],
+            colors: ["Core Black", "Grey", "White"],
+            sku: "0803-ADICD6404019"
         },
         {
             id: "3",
             brand: "NIKE",
-            name: "Air Force 1 '07",
-            price: 100.00,
-            description: "The classic basketball shoe with crisp leather and iconic style",
+            name: "Air Force 1 '07 Low Top",
+            price: 4295.00,
+            description: "The classic basketball shoe with crisp leather and iconic style. Timeless design for any occasion.",
             gender: "Unisex",
             category: "Lifestyle",
             image: "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=400&h=300&fit=crop",
             rating: 4.7,
             reviews: 89,
-            featured: true
+            featured: true,
+            stock: 12,
+            sizes: ["7", "8", "9", "10", "11", "12"],
+            colors: ["White", "Black"],
+            sku: "0803-NIKCD6404020"
         },
         {
             id: "4",
             brand: "ADIDAS",
-            name: "Superstar",
-            price: 85.00,
-            description: "Classic shell-toe design with iconic three stripes",
+            name: "Superstar Classic Shoes",
+            price: 3995.00,
+            description: "Iconic shell-toe design with three stripes. A timeless classic that never goes out of style.",
             gender: "Unisex",
             category: "Casual",
             image: "https://images.unsplash.com/photo-1600185365483-26d7a4cc7519?w=400&h=300&fit=crop",
             rating: 4.6,
             reviews: 150,
-            featured: true
+            featured: true,
+            stock: 20,
+            sizes: ["7", "8", "9", "10", "11"],
+            colors: ["Black/White", "White", "Red"],
+            sku: "0803-ADICD6404021"
         }
     ];
 }
@@ -400,6 +563,9 @@ function getSampleProducts() {
 window.clearFilters = clearFilters;
 window.addToCart = addToCart;
 window.initializeProducts = initializeProducts;
+window.navigateToViewProduct = navigateToViewProduct;
 
 // Export for testing
 window.products = products;
+
+console.log('data.js loaded - Products are now clickable!');
