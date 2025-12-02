@@ -335,11 +335,27 @@
                         <textarea id="productDescription" rows="3"></textarea>
                     </div>
                     
-                    <div class="form-group">
-                        <label>Image URL *</label>
-                        <input type="url" id="productImage" placeholder="https://example.com/image.jpg" required>
-                        <small>Enter a direct link to the product image</small>
-                    </div>
+                   <div class="form-group">
+    <label>Product Image *</label>
+    <div class="image-upload-container">
+        <div class="image-preview" id="imagePreview">
+            <div class="image-preview-placeholder">
+                <i class="fas fa-image"></i>
+                <p>No image selected</p>
+            </div>
+            <img id="imagePreviewImg" style="display: none; max-width: 200px; max-height: 200px; border-radius: 8px;">
+        </div>
+        <div class="upload-controls">
+            <input type="file" id="productImageFile" accept="image/*" style="display: none;">
+            <button type="button" class="secondary-btn" onclick="document.getElementById('productImageFile').click()">
+                <i class="fas fa-upload"></i> Choose Image
+            </button>
+            <div class="file-info" id="fileInfo" style="margin-top: 10px; font-size: 12px; color: #666;">
+                Max size: 2MB | Formats: JPG, PNG, GIF
+            </div>
+        </div>
+    </div>
+</div>
                     
                     <div class="form-row">
                         <div class="form-group">
@@ -388,6 +404,27 @@
             </div>
             <div class="modal-body">
                 <!-- Edit form will be loaded here dynamically -->
+                 <div class="form-group">
+    <label>Product Image</label>
+    <div class="image-upload-container">
+        <div class="image-preview" id="editImagePreview">
+            <div class="image-preview-placeholder">
+                <i class="fas fa-image"></i>
+                <p>Current image</p>
+            </div>
+            <img id="editImagePreviewImg" style="display: none; max-width: 200px; max-height: 200px; border-radius: 8px;">
+        </div>
+        <div class="upload-controls">
+            <input type="file" id="editProductImageFile" accept="image/*" style="display: none;">
+            <button type="button" class="secondary-btn" onclick="document.getElementById('editProductImageFile').click()">
+                <i class="fas fa-upload"></i> Change Image
+            </button>
+            <div class="file-info" id="editFileInfo" style="margin-top: 10px; font-size: 12px; color: #666;">
+                Leave empty to keep current image
+            </div>
+        </div>
+    </div>
+</div>
             </div>
         </div>
     </div>

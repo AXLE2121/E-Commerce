@@ -209,22 +209,71 @@
     </script>
 
     <script>
-    console.log('=== DEBUG INFO ===');
-    console.log('Firebase initialized:', typeof firebase !== 'undefined');
-    console.log('Firestore available:', typeof firebase.firestore !== 'undefined');
-    console.log('firebaseDataService:', typeof firebaseDataService);
-    console.log('loadProducts function:', typeof loadProducts);
-    console.log('renderProducts function:', typeof renderProducts);
+// Debug script to help troubleshoot
+console.log('=== DEBUG: Scripts loaded ===');
+console.log('Firebase:', typeof firebase !== 'undefined' ? 'Loaded' : 'Not loaded');
+console.log('firebase.auth:', typeof firebase.auth !== 'undefined' ? 'Available' : 'Not available');
+console.log('firebase.firestore:', typeof firebase.firestore !== 'undefined' ? 'Available' : 'Not available');
+
+// Manual test button in console
+window.debugProducts = async function() {
+    console.log('=== MANUAL PRODUCT TEST ===');
     
-    // Manual test button
-    window.testProducts = function() {
-        console.log('Testing products...');
-        if (typeof loadProducts === 'function') {
-            loadProducts();
+    if (!firebase.apps.length) {
+        console.error('Firebase not initialized');
+        return;
+    }
+    
+    try {
+        const db = firebase.firestore();
+        const snapshot = await db.collection('products').get();
+        console.log(`Found ${snapshot.size} products`);
+        
+        if (snapshot.empty) {
+            console.log('No products in Firestore');
         } else {
-            console.error('loadProducts not found!');
+            snapshot.forEach(doc => {
+                console.log(`Product ${doc.id}:`, doc.data());
+            });
         }
-    };
-    </script>
+    } catch (error) {
+        console.error('Firestore error:', error);
+    }
+};
+
+// Add a test button to page for easy debugging
+document.addEventListener('DOMContentLoaded', function() {
+    // Add test button to header for debugging
+    setTimeout(() => {
+        const header = document.querySelector('.header-top');
+        if (header) {
+            const testBtn = document.createElement('button');
+            testBtn.innerHTML = '<i class="fas fa-bug"></i> Test Products';
+            testBtn.style.cssText = `
+                margin-left: 10px;
+                padding: 5px 10px;
+                background: #4caf50;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 12px;
+            `;
+            testBtn.onclick = function() {
+                if (typeof initializeProducts === 'function') {
+                    initializeProducts();
+                } else {
+                    alert('initializeProducts function not found');
+                }
+            };
+            
+            const logoContainer = document.querySelector('.logo-container');
+            if (logoContainer) {
+                logoContainer.appendChild(testBtn);
+            }
+        }
+    }, 2000);
+});
+</script>
 </body>
 </html>

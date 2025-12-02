@@ -1,8 +1,8 @@
-// admin.js - Admin Panel Functionality
+// admin.js - Admin Panel with Image Upload (No Firebase Storage Version)
+console.log('admin.js loaded - No Firebase Storage version');
 
 // Global variables
 let currentUser = null;
-let adminEmail = "admin@footlocker.com"; // Default admin email
 let products = [];
 let currentPage = 1;
 const itemsPerPage = 10;
@@ -19,12 +19,137 @@ const loadingOverlay = document.getElementById('loadingOverlay');
 const auth = firebase.auth();
 const db = firebase.firestore();
 
+// Variables for image upload
+let selectedImageFile = null;
+let imagePreviewUrl = null;
+
 // Check admin authentication on page load
 document.addEventListener('DOMContentLoaded', function() {
     checkAdminAuth();
     initializeEventListeners();
     setupNavigation();
+    setupImageUpload();
 });
+
+// Setup image upload functionality (preview only, no upload)
+function setupImageUpload() {
+    const imageFileInput = document.getElementById('productImageFile');
+    const imagePreview = document.getElementById('imagePreviewImg');
+    const previewPlaceholder = document.querySelector('.image-preview-placeholder');
+    const fileInfo = document.getElementById('fileInfo');
+    
+    if (imageFileInput) {
+        imageFileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            
+            if (!file) {
+                resetImageUpload();
+                return;
+            }
+            
+            // Validate file type
+            const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+            if (!validTypes.includes(file.type)) {
+                showMessage('Please select a valid image file (JPG, PNG, GIF)', 'error');
+                resetImageUpload();
+                return;
+            }
+            
+            // Validate file size (2MB max)
+            if (file.size > 2 * 1024 * 1024) {
+                showMessage('Image size should be less than 2MB', 'error');
+                resetImageUpload();
+                return;
+            }
+            
+            selectedImageFile = file;
+            
+            // Update file info
+            const fileSize = (file.size / 1024).toFixed(2);
+            fileInfo.innerHTML = `
+                <strong>Selected:</strong> ${file.name}<br>
+                <strong>Size:</strong> ${fileSize} KB<br>
+                <strong>Type:</strong> ${file.type}
+            `;
+            
+            // Show preview
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                imagePreviewUrl = e.target.result;
+                imagePreview.src = imagePreviewUrl;
+                imagePreview.style.display = 'block';
+                previewPlaceholder.style.display = 'none';
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+    
+    // Also setup edit image upload
+    const editImageFileInput = document.getElementById('editProductImageFile');
+    if (editImageFileInput) {
+        editImageFileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const editImagePreview = document.getElementById('editImagePreviewImg');
+                    if (editImagePreview) {
+                        editImagePreview.src = e.target.result;
+                        editImagePreview.style.display = 'block';
+                        document.querySelector('#editProductModal .image-preview-placeholder').style.display = 'none';
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+}
+
+// Reset image upload
+function resetImageUpload() {
+    selectedImageFile = null;
+    imagePreviewUrl = null;
+    
+    const imageFileInput = document.getElementById('productImageFile');
+    const imagePreview = document.getElementById('imagePreviewImg');
+    const previewPlaceholder = document.querySelector('.image-preview-placeholder');
+    const fileInfo = document.getElementById('fileInfo');
+    
+    if (imageFileInput) imageFileInput.value = '';
+    if (imagePreview) {
+        imagePreview.src = '';
+        imagePreview.style.display = 'none';
+    }
+    if (previewPlaceholder) previewPlaceholder.style.display = 'flex';
+    if (fileInfo) fileInfo.innerHTML = 'Max size: 2MB | Formats: JPG, PNG, GIF';
+}
+
+// Upload image - NO Firebase Storage (uses placeholder)
+async function uploadImageToStorage(file, productId) {
+    try {
+        if (!file) {
+            // Use default placeholder
+            return "https://via.placeholder.com/600x400/cccccc/969696?text=No+Image+Selected";
+        }
+        
+        console.log('⚠️ Firebase Storage not available - using placeholder image');
+        console.log('To enable real image uploads:');
+        console.log('1. Add billing to your Firebase project');
+        console.log('2. Enable Firebase Storage');
+        console.log('3. Update this function to use firebase.storage()');
+        
+        // Generate a unique placeholder URL
+        const timestamp = Date.now();
+        const placeholderText = encodeURIComponent('Product+Image+' + timestamp);
+        const placeholderUrl = `https://via.placeholder.com/600x400/cccccc/969696?text=${placeholderText}`;
+        
+        return placeholderUrl;
+        
+    } catch (error) {
+        console.error('Error in image upload:', error);
+        return "https://via.placeholder.com/600x400/cccccc/969696?text=Error+Uploading";
+    }
+}
 
 // Check if user is admin
 async function checkAdminAuth() {
@@ -57,21 +182,20 @@ async function checkAdminAuth() {
 // Check if user has admin privileges
 async function checkIfAdmin(userId) {
     try {
-        // Method 1: Check user document in Firestore
         const userDoc = await db.collection('users').doc(userId).get();
         
         if (userDoc.exists) {
             const userData = userDoc.data();
             
-            // Check if user has admin role or is the default admin email
-            if (userData.role === 'admin' || userData.email === adminEmail) {
+            // Check if user has admin role
+            if (userData.role === 'admin') {
                 return true;
             }
         }
         
-        // Method 2: Check against admin email list (for development)
+        // Also check by email
         const user = auth.currentUser;
-        if (user && user.email === adminEmail) {
+        if (user && user.email === 'admin@shoehub.com') {
             return true;
         }
         
@@ -116,6 +240,17 @@ function initializeEventListeners() {
     const selectAll = document.getElementById('selectAll');
     if (selectAll) {
         selectAll.addEventListener('change', toggleSelectAll);
+    }
+    
+    // Confirm Delete button
+    const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+    if (confirmDeleteBtn) {
+        confirmDeleteBtn.addEventListener('click', function() {
+            const productId = document.getElementById('deleteModal').dataset.productId;
+            if (productId) {
+                deleteProduct(productId);
+            }
+        });
     }
 }
 
@@ -196,7 +331,7 @@ async function loadDashboardData() {
         
     } catch (error) {
         console.error("Error loading dashboard data:", error);
-        showMessage("Error loading dashboard data", "error");
+        showMessage("Error loading dashboard data: " + error.message, "error");
     }
     
     showLoading(false);
@@ -239,7 +374,8 @@ function renderProductsTable(filteredProducts = products) {
             <td>
                 <img src="${product.image || 'https://via.placeholder.com/50'}" 
                      alt="${product.name}" 
-                     style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;">
+                     style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px; cursor: pointer;"
+                     onclick="openImagePreview('${product.image}')">
             </td>
             <td>
                 <strong>${product.name}</strong>
@@ -272,6 +408,36 @@ function renderProductsTable(filteredProducts = products) {
     `).join('');
 }
 
+// Open image preview in modal
+function openImagePreview(imageUrl) {
+    const modalHTML = `
+        <div class="image-preview-modal" id="imagePreviewModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Image Preview</h3>
+                    <button class="modal-close" onclick="closeModal('imagePreviewModal')">&times;</button>
+                </div>
+                <div class="modal-body" style="text-align: center;">
+                    <img src="${imageUrl}" alt="Product Image" style="max-width: 100%; max-height: 70vh; border-radius: 8px;">
+                    <div style="margin-top: 15px;">
+                        <a href="${imageUrl}" target="_blank" class="primary-btn" style="display: inline-block; padding: 8px 16px;">
+                            <i class="fas fa-external-link-alt"></i> Open in New Tab
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Remove existing modal
+    const existingModal = document.getElementById('imagePreviewModal');
+    if (existingModal) existingModal.remove();
+    
+    // Add new modal
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    document.body.style.overflow = 'hidden';
+}
+
 // Load recent products for dashboard
 async function loadRecentProducts() {
     const tableBody = document.getElementById('recentProductsTable');
@@ -291,7 +457,8 @@ async function loadRecentProducts() {
                     <td>
                         <img src="${product.image || 'https://via.placeholder.com/40'}" 
                              alt="${product.name}" 
-                             style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px;">
+                             style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px; cursor: pointer;"
+                             onclick="openImagePreview('${product.image}')">
                     </td>
                     <td>${product.name}</td>
                     <td>${product.brand}</td>
@@ -316,7 +483,6 @@ async function loadRecentActivity() {
     const activityList = document.getElementById('activityList');
     if (!activityList) return;
     
-    // For now, show recent products as activity
     try {
         const snapshot = await db.collection('products')
             .orderBy('createdAt', 'desc')
@@ -348,34 +514,71 @@ async function handleAddProduct(e) {
     e.preventDefault();
     showLoading(true);
     
-    const productData = {
-        name: document.getElementById('productName').value,
-        brand: document.getElementById('productBrand').value,
-        category: document.getElementById('productCategory').value,
-        gender: document.getElementById('productGender').value,
-        price: parseFloat(document.getElementById('productPrice').value),
-        stock: parseInt(document.getElementById('productStock').value),
-        description: document.getElementById('productDescription').value,
-        image: document.getElementById('productImage').value,
-        sizes: document.getElementById('productSizes').value.split(',').map(s => s.trim()),
-        colors: document.getElementById('productColors').value.split(',').map(c => c.trim()),
-        rating: parseFloat(document.getElementById('productRating').value),
-        reviews: parseInt(document.getElementById('productReviews').value),
-        featured: document.getElementById('productFeatured').checked,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    };
-    
     try {
-        // Add product to Firestore
-        await db.collection('products').add(productData);
+        // Validate required fields
+        const productName = document.getElementById('productName').value;
+        const productBrand = document.getElementById('productBrand').value;
+        const productCategory = document.getElementById('productCategory').value;
+        const productGender = document.getElementById('productGender').value;
+        const productPrice = document.getElementById('productPrice').value;
+        const productStock = document.getElementById('productStock').value;
+        
+        if (!productName || !productBrand || !productCategory || !productGender || !productPrice || !productStock) {
+            showMessage('Please fill in all required fields', 'error');
+            showLoading(false);
+            return;
+        }
+        
+        // Create product data without image first
+        const productData = {
+            name: productName,
+            brand: productBrand,
+            category: productCategory,
+            gender: productGender,
+            price: parseFloat(productPrice),
+            stock: parseInt(productStock),
+            description: document.getElementById('productDescription').value || '',
+            sizes: document.getElementById('productSizes').value ? 
+                   document.getElementById('productSizes').value.split(',').map(s => s.trim()) : [],
+            colors: document.getElementById('productColors').value ? 
+                    document.getElementById('productColors').value.split(',').map(c => c.trim()) : [],
+            rating: parseFloat(document.getElementById('productRating').value) || 4.5,
+            reviews: parseInt(document.getElementById('productReviews').value) || 0,
+            featured: document.getElementById('productFeatured').checked,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        
+        // First, add product to Firestore to get an ID
+        const productRef = await db.collection('products').add(productData);
+        const productId = productRef.id;
+        
+        // Get image URL (placeholder since Firebase Storage is not available)
+        let imageUrl = "https://via.placeholder.com/600x400/cccccc/969696?text=No+Image";
+        
+        if (selectedImageFile) {
+            showLoadingMessage('Processing image...');
+            imageUrl = await uploadImageToStorage(selectedImageFile, productId);
+            
+            // Show info message about placeholder image
+            if (imageUrl.includes('placeholder')) {
+                showMessage('⚠️ Using placeholder image. Firebase Storage not available.', 'info');
+            }
+        }
+        
+        // Update product with image URL
+        await db.collection('products').doc(productId).update({
+            image: imageUrl,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
         
         // Show success message
         showMessage("Product added successfully!", "success");
         
-        // Close modal and reset form
-        closeModal('addProductModal');
+        // Reset form and close modal
         document.getElementById('addProductForm').reset();
+        resetImageUpload();
+        closeModal('addProductModal');
         
         // Refresh products list
         loadProducts();
@@ -389,7 +592,7 @@ async function handleAddProduct(e) {
     showLoading(false);
 }
 
-// Edit product
+// Edit product - Load product data into edit form
 async function editProduct(productId) {
     showLoading(true);
     
@@ -399,10 +602,9 @@ async function editProduct(productId) {
         if (doc.exists) {
             const product = doc.data();
             
+            // Create edit form HTML
             const editFormHTML = `
-                <form id="editProductForm">
-                    <input type="hidden" id="editProductId" value="${productId}">
-                    
+                <form id="editProductForm" onsubmit="event.preventDefault(); updateProduct('${productId}');">
                     <div class="form-row">
                         <div class="form-group">
                             <label>Product Name *</label>
@@ -411,6 +613,7 @@ async function editProduct(productId) {
                         <div class="form-group">
                             <label>Brand *</label>
                             <select id="editProductBrand" required>
+                                <option value="">Select Brand</option>
                                 <option value="NIKE" ${product.brand === 'NIKE' ? 'selected' : ''}>NIKE</option>
                                 <option value="ADIDAS" ${product.brand === 'ADIDAS' ? 'selected' : ''}>ADIDAS</option>
                                 <option value="PUMA" ${product.brand === 'PUMA' ? 'selected' : ''}>PUMA</option>
@@ -426,6 +629,7 @@ async function editProduct(productId) {
                         <div class="form-group">
                             <label>Category *</label>
                             <select id="editProductCategory" required>
+                                <option value="">Select Category</option>
                                 <option value="Running" ${product.category === 'Running' ? 'selected' : ''}>Running</option>
                                 <option value="Basketball" ${product.category === 'Basketball' ? 'selected' : ''}>Basketball</option>
                                 <option value="Lifestyle" ${product.category === 'Lifestyle' ? 'selected' : ''}>Lifestyle</option>
@@ -437,6 +641,7 @@ async function editProduct(productId) {
                         <div class="form-group">
                             <label>Gender *</label>
                             <select id="editProductGender" required>
+                                <option value="">Select Gender</option>
                                 <option value="Men" ${product.gender === 'Men' ? 'selected' : ''}>Men</option>
                                 <option value="Women" ${product.gender === 'Women' ? 'selected' : ''}>Women</option>
                                 <option value="Unisex" ${product.gender === 'Unisex' ? 'selected' : ''}>Unisex</option>
@@ -462,18 +667,35 @@ async function editProduct(productId) {
                     </div>
                     
                     <div class="form-group">
-                        <label>Image URL *</label>
-                        <input type="url" id="editProductImage" value="${product.image || ''}" required>
+                        <label>Product Image</label>
+                        <div class="image-upload-container">
+                            <div class="image-preview" id="editImagePreview">
+                                <div class="image-preview-placeholder" style="${product.image ? 'display: none;' : 'display: flex;'}">
+                                    <i class="fas fa-image"></i>
+                                    <p>Current image</p>
+                                </div>
+                                <img id="editImagePreviewImg" src="${product.image || ''}" style="${product.image ? 'display: block; max-width: 200px; max-height: 200px; border-radius: 8px;' : 'display: none;'}">
+                            </div>
+                            <div class="upload-controls">
+                                <input type="file" id="editProductImageFile" accept="image/*" style="display: none;">
+                                <button type="button" class="secondary-btn" onclick="document.getElementById('editProductImageFile').click()">
+                                    <i class="fas fa-upload"></i> Change Image
+                                </button>
+                                <div class="file-info" id="editFileInfo" style="margin-top: 10px; font-size: 12px; color: #666;">
+                                    Leave empty to keep current image
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     
                     <div class="form-row">
                         <div class="form-group">
                             <label>Sizes (comma separated)</label>
-                            <input type="text" id="editProductSizes" value="${product.sizes ? product.sizes.join(', ') : ''}">
+                            <input type="text" id="editProductSizes" value="${product.sizes ? product.sizes.join(', ') : ''}" placeholder="7,8,9,10,11,12">
                         </div>
                         <div class="form-group">
                             <label>Colors (comma separated)</label>
-                            <input type="text" id="editProductColors" value="${product.colors ? product.colors.join(', ') : ''}">
+                            <input type="text" id="editProductColors" value="${product.colors ? product.colors.join(', ') : ''}" placeholder="Black,White,Red">
                         </div>
                     </div>
                     
@@ -502,14 +724,11 @@ async function editProduct(productId) {
                 </form>
             `;
             
+            // Update modal content
             const modalBody = document.querySelector('#editProductModal .modal-body');
-            modalBody.innerHTML = editFormHTML;
-            
-            // Add form submission handler
-            document.getElementById('editProductForm').addEventListener('submit', (e) => {
-                e.preventDefault();
-                updateProduct(productId);
-            });
+            if (modalBody) {
+                modalBody.innerHTML = editFormHTML;
+            }
             
             // Show modal
             document.getElementById('editProductModal').style.display = 'flex';
@@ -527,24 +746,38 @@ async function editProduct(productId) {
 async function updateProduct(productId) {
     showLoading(true);
     
-    const productData = {
-        name: document.getElementById('editProductName').value,
-        brand: document.getElementById('editProductBrand').value,
-        category: document.getElementById('editProductCategory').value,
-        gender: document.getElementById('editProductGender').value,
-        price: parseFloat(document.getElementById('editProductPrice').value),
-        stock: parseInt(document.getElementById('editProductStock').value),
-        description: document.getElementById('editProductDescription').value,
-        image: document.getElementById('editProductImage').value,
-        sizes: document.getElementById('editProductSizes').value.split(',').map(s => s.trim()),
-        colors: document.getElementById('editProductColors').value.split(',').map(c => c.trim()),
-        rating: parseFloat(document.getElementById('editProductRating').value),
-        reviews: parseInt(document.getElementById('editProductReviews').value),
-        featured: document.getElementById('editProductFeatured').checked,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    };
-    
     try {
+        const productData = {
+            name: document.getElementById('editProductName').value,
+            brand: document.getElementById('editProductBrand').value,
+            category: document.getElementById('editProductCategory').value,
+            gender: document.getElementById('editProductGender').value,
+            price: parseFloat(document.getElementById('editProductPrice').value),
+            stock: parseInt(document.getElementById('editProductStock').value),
+            description: document.getElementById('editProductDescription').value || '',
+            sizes: document.getElementById('editProductSizes').value ? 
+                   document.getElementById('editProductSizes').value.split(',').map(s => s.trim()) : [],
+            colors: document.getElementById('editProductColors').value ? 
+                    document.getElementById('editProductColors').value.split(',').map(c => c.trim()) : [],
+            rating: parseFloat(document.getElementById('editProductRating').value) || 4.5,
+            reviews: parseInt(document.getElementById('editProductReviews').value) || 0,
+            featured: document.getElementById('editProductFeatured').checked,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        
+        // Check if new image was selected
+        const editImageFile = document.getElementById('editProductImageFile')?.files[0];
+        if (editImageFile) {
+            showLoadingMessage('Processing new image...');
+            const imageUrl = await uploadImageToStorage(editImageFile, productId);
+            productData.image = imageUrl;
+            
+            // Show info message about placeholder image
+            if (imageUrl.includes('placeholder')) {
+                showMessage('⚠️ Using placeholder image. Firebase Storage not available.', 'info');
+            }
+        }
+        
         await db.collection('products').doc(productId).update(productData);
         
         showMessage("Product updated successfully!", "success");
@@ -562,10 +795,9 @@ async function updateProduct(productId) {
 
 // Confirm delete product
 function confirmDelete(productId) {
+    // Store product ID for deletion
+    document.getElementById('deleteModal').dataset.productId = productId;
     document.getElementById('deleteModal').style.display = 'flex';
-    
-    const confirmBtn = document.getElementById('confirmDeleteBtn');
-    confirmBtn.onclick = () => deleteProduct(productId);
 }
 
 // Delete product
@@ -573,6 +805,7 @@ async function deleteProduct(productId) {
     showLoading(true);
     
     try {
+        // Delete product from Firestore
         await db.collection('products').doc(productId).delete();
         
         showMessage("Product deleted successfully!", "success");
@@ -590,8 +823,56 @@ async function deleteProduct(productId) {
 
 // View product details
 async function viewProduct(productId) {
-    // Redirect to product page or show in modal
-    alert(`View product ID: ${productId}\n(Would redirect to product detail page)`);
+    try {
+        const doc = await db.collection('products').doc(productId).get();
+        
+        if (doc.exists) {
+            const product = doc.data();
+            
+            const viewModalHTML = `
+                <div class="view-product-modal" id="viewProductModal">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3>Product Details</h3>
+                            <button class="modal-close" onclick="closeModal('viewProductModal')">&times;</button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="product-view-grid">
+                                <div class="product-view-image">
+                                    <img src="${product.image || 'https://via.placeholder.com/600x400'}" alt="${product.name}" style="width: 100%; border-radius: 8px;">
+                                </div>
+                                <div class="product-view-details">
+                                    <h2>${product.name}</h2>
+                                    <p><strong>Brand:</strong> ${product.brand}</p>
+                                    <p><strong>Category:</strong> ${product.category}</p>
+                                    <p><strong>Gender:</strong> ${product.gender}</p>
+                                    <p><strong>Price:</strong> $${product.price?.toFixed(2)}</p>
+                                    <p><strong>Stock:</strong> ${product.stock}</p>
+                                    <p><strong>Rating:</strong> ${product.rating || 'N/A'}</p>
+                                    <p><strong>Description:</strong> ${product.description || 'No description'}</p>
+                                    <p><strong>Featured:</strong> ${product.featured ? 'Yes' : 'No'}</p>
+                                    ${product.sizes ? `<p><strong>Sizes:</strong> ${product.sizes.join(', ')}</p>` : ''}
+                                    ${product.colors ? `<p><strong>Colors:</strong> ${product.colors.join(', ')}</p>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Remove existing modal
+            const existingModal = document.getElementById('viewProductModal');
+            if (existingModal) existingModal.remove();
+            
+            // Add new modal
+            document.body.insertAdjacentHTML('beforeend', viewModalHTML);
+            document.body.style.overflow = 'hidden';
+        }
+        
+    } catch (error) {
+        console.error("Error viewing product:", error);
+        showMessage("Error loading product details", "error");
+    }
 }
 
 // Search products
@@ -632,11 +913,17 @@ function applyBulkAction() {
     }
     
     if (bulkAction === 'delete') {
-        if (confirm(`Are you sure you want to delete ${selectedProducts.length} product(s)?`)) {
+        if (confirm(`Are you sure you want to delete ${selectedProducts.length} product(s)? This action cannot be undone.`)) {
             selectedProducts.forEach(productId => {
                 deleteProduct(productId);
             });
         }
+    } else if (bulkAction === 'publish') {
+        // Implement publish functionality
+        showMessage("Publish feature coming soon", "info");
+    } else if (bulkAction === 'unpublish') {
+        // Implement unpublish functionality
+        showMessage("Unpublish feature coming soon", "info");
     }
 }
 
@@ -649,11 +936,30 @@ function setupPagination() {
     
     let paginationHTML = '';
     
+    // Previous button
+    if (currentPage > 1) {
+        paginationHTML += `
+            <button class="pagination-btn" onclick="goToPage(${currentPage - 1})">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+        `;
+    }
+    
+    // Page numbers
     for (let i = 1; i <= totalPages; i++) {
         paginationHTML += `
             <button class="pagination-btn ${i === currentPage ? 'active' : ''}" 
                     onclick="goToPage(${i})">
                 ${i}
+            </button>
+        `;
+    }
+    
+    // Next button
+    if (currentPage < totalPages) {
+        paginationHTML += `
+            <button class="pagination-btn" onclick="goToPage(${currentPage + 1})">
+                <i class="fas fa-chevron-right"></i>
             </button>
         `;
     }
@@ -670,18 +976,42 @@ function goToPage(page) {
 
 // Show add product modal
 function showAddProductModal() {
+    resetImageUpload();
     document.getElementById('addProductModal').style.display = 'flex';
 }
 
 // Close modal
 function closeModal(modalId) {
-    document.getElementById(modalId).style.display = 'none';
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = 'auto';
+        
+        // Reset edit form if closing edit modal
+        if (modalId === 'editProductModal') {
+            const modalBody = document.querySelector('#editProductModal .modal-body');
+            if (modalBody) {
+                modalBody.innerHTML = '';
+            }
+        }
+    }
 }
 
 // Show loading overlay
 function showLoading(show) {
     if (loadingOverlay) {
         loadingOverlay.style.display = show ? 'flex' : 'none';
+    }
+}
+
+// Show loading with custom message
+function showLoadingMessage(message) {
+    if (loadingOverlay) {
+        loadingOverlay.innerHTML = `
+            <div class="loading-spinner"></div>
+            <div class="loading-text">${message}</div>
+        `;
+        loadingOverlay.style.display = 'flex';
     }
 }
 
@@ -704,7 +1034,10 @@ function showMessage(message, type = 'error') {
         font-weight: 500;
         z-index: 1001;
         animation: slideInRight 0.3s ease;
-        ${type === 'success' ? 'background: #4caf50;' : 'background: #f44336;'}
+        ${type === 'success' ? 'background: #4caf50;' : 
+          type === 'info' ? 'background: #2196f3;' : 
+          type === 'warning' ? 'background: #ff9800;' :
+          'background: #f44336;'}
     `;
     
     document.body.appendChild(messageDiv);
@@ -745,16 +1078,6 @@ async function loadOrders() {
             </td>
         </tr>
     `;
-    
-    // Uncomment and implement when you have orders collection
-    /*
-    try {
-        const snapshot = await db.collection('orders').get();
-        // Render orders table
-    } catch (error) {
-        console.error("Error loading orders:", error);
-    }
-    */
 }
 
 // Load users (placeholder)
@@ -774,7 +1097,6 @@ async function loadUsers() {
 
 // Load analytics (placeholder)
 function loadAnalytics() {
-    // Initialize charts
     const salesCtx = document.getElementById('salesChart');
     const productsCtx = document.getElementById('productsChart');
     
@@ -836,3 +1158,4 @@ window.goToPage = goToPage;
 window.applyBulkAction = applyBulkAction;
 window.toggleSelectAll = toggleSelectAll;
 window.exportProducts = exportProducts;
+window.openImagePreview = openImagePreview;
