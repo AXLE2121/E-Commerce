@@ -20,6 +20,11 @@ const emailInput = document.getElementById('email');
 const passwordInput = document.getElementById('password');
 const loginBtn = document.getElementById('loginBtn');
 
+// DOM elements - Reset Password Page
+const resetpasswordForm = document.getElementById('resetpasswordForm');
+const emailresetInput = document.getElementById('email');
+const resetBtn = document.getElementById('resetBtn');
+
 // DOM elements - Register Page
 const registerForm = document.getElementById('registerForm');
 const firstNameInput = document.getElementById('firstName');
@@ -250,6 +255,43 @@ if (loginForm && emailInput && passwordInput && loginBtn) {
     if (!emailInput) console.log('emailInput missing');
     if (!passwordInput) console.log('passwordInput missing');
     if (!loginBtn) console.log('loginBtn missing');
+}
+
+// ========== RESET PASSSSWORD FUNCTIONALITY ==========
+if (resetpasswordForm && emailresetInput) {
+
+  function sendEmail(email) {
+    auth.sendPasswordResetEmail(email)
+      .then(() => {
+        showMessage('Email sent. Check your inbox or spam.', 'success');
+      })
+      .catch(() => {
+        showMessage("Failed to send email. Please try again later or contact the admin.", "error");
+      });
+  }
+
+  resetpasswordForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    console.log('Reset password form submitted');
+
+    const email = emailresetInput.value.trim();
+
+    if (!email) {
+      showMessage('Please enter your email address.');
+      return;
+    }
+
+    if (!validateEmail(email)) {
+      showMessage('Please enter a valid email address.');
+      return;
+    }
+
+    sendEmail(email);
+  });
+}
+else{
+    console.log('Reset password form elements not found');
+    if (!emailresetInput) console.log('emailresetInput missing');
 }
 
 // ========== REGISTRATION FUNCTIONALITY ==========
