@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Panel - Foot Locker</title>
+    <title>Admin Panel - ShoeHub</title>
     <link rel="stylesheet" href="styles/style.css">
     <link rel="stylesheet" href="styles/admin.css">
     <link rel="stylesheet" href="styles/logo.css">
@@ -13,6 +13,77 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
+    
+    <style>
+        .url-upload-option {
+            margin-bottom: 15px;
+        }
+
+        .url-upload-option input[type="url"] {
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        .url-upload-option input[type="url"]:focus {
+            border-color: #d50000;
+            outline: none;
+        }
+
+        .url-upload-option small a {
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .url-upload-option small a:hover {
+            text-decoration: underline;
+        }
+
+        .or-separator {
+            position: relative;
+            margin: 20px 0;
+        }
+
+        .or-separator hr {
+            border: none;
+            height: 1px;
+            background-color: #ddd;
+        }
+
+        .or-separator span {
+            position: relative;
+            top: -10px;
+            background: white;
+            padding: 0 15px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .file-upload-option button {
+            padding: 10px;
+            font-size: 14px;
+        }
+
+        .image-preview-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 200px;
+            height: 200px;
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            color: #999;
+        }
+
+        .image-preview-placeholder i {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .image-preview-placeholder p {
+            font-size: 14px;
+        }
+    </style>
 </head>
 <body>
     <!-- Admin Header -->
@@ -22,7 +93,7 @@
                 <a href="index.html">
                     <img src="images/logo.png" alt="Foot Locker Logo" class="logo-img">
                 </a>
-                <h1 class="logo">Foot Locker <span class="admin-badge">Admin</span></h1>
+                <h1 class="logo">ShoeHub <span class="admin-badge">Admin</span></h1>
             </div>
             
             <div class="admin-user-info">
@@ -44,8 +115,7 @@
                 <li><a href="#dashboard" class="admin-nav-link active"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
                 <li><a href="#products" class="admin-nav-link"><i class="fas fa-shoe-prints"></i> Products</a></li>
                 <li><a href="#orders" class="admin-nav-link"><i class="fas fa-shopping-bag"></i> Orders</a></li>
-                <li><a href="#users" class="admin-nav-link"><i class="fas fa-users"></i> Users</a></li>
-                <li><a href="#analytics" class="admin-nav-link"><i class="fas fa-chart-line"></i> Analytics</a></li>
+
             </ul>
         </nav>
     </header>
@@ -73,24 +143,6 @@
                         <p>Total Orders</p>
                     </div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-icon" style="background: #ff9800;">
-                        <i class="fas fa-users"></i>
-                    </div>
-                    <div class="stat-info">
-                        <h3 id="totalUsers">0</h3>
-                        <p>Total Users</p>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon" style="background: #f44336;">
-                        <i class="fas fa-chart-line"></i>
-                    </div>
-                    <div class="stat-info">
-                        <h3 id="totalRevenue">$0</h3>
-                        <p>Total Revenue</p>
-                    </div>
-                </div>
             </div>
             
             <div class="quick-actions">
@@ -112,7 +164,7 @@
             <div id="dashboardContent" class="admin-section active">
                 <div class="section-header">
                     <h2>Dashboard Overview</h2>
-                    <p>Welcome to Foot Locker Admin Panel</p>
+                    <p>Welcome to ShoeHub Admin Panel</p>
                 </div>
                 
                 <div class="recent-activity">
@@ -335,27 +387,52 @@
                         <textarea id="productDescription" rows="3"></textarea>
                     </div>
                     
-                   <div class="form-group">
-    <label>Product Image *</label>
-    <div class="image-upload-container">
-        <div class="image-preview" id="imagePreview">
-            <div class="image-preview-placeholder">
-                <i class="fas fa-image"></i>
-                <p>No image selected</p>
-            </div>
-            <img id="imagePreviewImg" style="display: none; max-width: 200px; max-height: 200px; border-radius: 8px;">
-        </div>
-        <div class="upload-controls">
-            <input type="file" id="productImageFile" accept="image/*" style="display: none;">
-            <button type="button" class="secondary-btn" onclick="document.getElementById('productImageFile').click()">
-                <i class="fas fa-upload"></i> Choose Image
-            </button>
-            <div class="file-info" id="fileInfo" style="margin-top: 10px; font-size: 12px; color: #666;">
-                Max size: 2MB | Formats: JPG, PNG, GIF
-            </div>
-        </div>
-    </div>
-</div>
+                    <div class="form-group">
+                        <label>Product Image *</label>
+                        <div class="image-upload-container">
+                            <div class="image-preview" id="imagePreview">
+                                <div class="image-preview-placeholder">
+                                    <i class="fas fa-image"></i>
+                                    <p>No image selected</p>
+                                </div>
+                                <img id="imagePreviewImg" style="display: none; max-width: 200px; max-height: 200px; border-radius: 8px;">
+                            </div>
+                            <div class="upload-controls">
+                                <!-- Option 1: URL Input -->
+                                <div class="url-upload-option">
+                                    <label style="display: block; margin-bottom: 5px; font-weight: bold;">Option 1: Paste Image URL</label>
+                                    <input type="url" 
+                                           id="productImageUrl" 
+                                           placeholder="https://example.com/image.jpg"
+                                           style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 10px;"
+                                           oninput="previewImageFromUrl(this.value)">
+                                    <small style="color: #666; display: block; margin-bottom: 10px;">
+                                        Use free image hosting: 
+                                        <a href="https://imgbb.com/" target="_blank" style="color: #d50000;">ImgBB</a>, 
+                                        <a href="https://postimages.org/" target="_blank" style="color: #d50000;">Postimages</a>, 
+                                        <a href="https://imgur.com/" target="_blank" style="color: #d50000;">Imgur</a>
+                                    </small>
+                                </div>
+                                
+                                <div class="or-separator" style="text-align: center; margin: 15px 0;">
+                                    <span style="background: white; padding: 0 10px; color: #666;">OR</span>
+                                    <hr style="border: none; border-top: 1px solid #ddd; margin-top: -8px;">
+                                </div>
+                                
+                                <!-- Option 2: File Upload -->
+                                <div class="file-upload-option">
+                                    <label style="display: block; margin-bottom: 5px; font-weight: bold;">Option 2: Upload Image</label>
+                                    <input type="file" id="productImageFile" accept="image/*" style="display: none;">
+                                    <button type="button" class="secondary-btn" onclick="document.getElementById('productImageFile').click()" style="width: 100%;">
+                                        <i class="fas fa-upload"></i> Choose Local Image
+                                    </button>
+                                    <div class="file-info" id="fileInfo" style="margin-top: 10px; font-size: 12px; color: #666;">
+                                        Note: File upload will convert image to base64 (max 5MB). For better performance, use URL.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     
                     <div class="form-row">
                         <div class="form-group">
@@ -404,27 +481,6 @@
             </div>
             <div class="modal-body">
                 <!-- Edit form will be loaded here dynamically -->
-                 <div class="form-group">
-    <label>Product Image</label>
-    <div class="image-upload-container">
-        <div class="image-preview" id="editImagePreview">
-            <div class="image-preview-placeholder">
-                <i class="fas fa-image"></i>
-                <p>Current image</p>
-            </div>
-            <img id="editImagePreviewImg" style="display: none; max-width: 200px; max-height: 200px; border-radius: 8px;">
-        </div>
-        <div class="upload-controls">
-            <input type="file" id="editProductImageFile" accept="image/*" style="display: none;">
-            <button type="button" class="secondary-btn" onclick="document.getElementById('editProductImageFile').click()">
-                <i class="fas fa-upload"></i> Change Image
-            </button>
-            <div class="file-info" id="editFileInfo" style="margin-top: 10px; font-size: 12px; color: #666;">
-                Leave empty to keep current image
-            </div>
-        </div>
-    </div>
-</div>
             </div>
         </div>
     </div>

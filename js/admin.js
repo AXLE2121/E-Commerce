@@ -1,5 +1,5 @@
-// admin.js - Admin Panel with Image Upload and Orders Management
-console.log('admin.js loaded - Complete version with Orders Management');
+// admin.js - Admin Panel with URL-based Image Upload
+console.log('admin.js loaded - Complete version with URL-based image upload');
 
 // Global variables
 let currentUser = null;
@@ -27,19 +27,43 @@ let imagePreviewUrl = null;
 
 // Check admin authentication on page load
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded, checking Firebase...');
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+        console.log('Firebase initialized');
+    }
     checkAdminAuth();
     initializeEventListeners();
     setupNavigation();
     setupImageUpload();
 });
 
-// Setup image upload functionality (preview only, no upload)
+// Setup image upload functionality with URL option
 function setupImageUpload() {
     const imageFileInput = document.getElementById('productImageFile');
+    const imageUrlInput = document.getElementById('productImageUrl');
     const imagePreview = document.getElementById('imagePreviewImg');
     const previewPlaceholder = document.querySelector('.image-preview-placeholder');
-    const fileInfo = document.getElementById('fileInfo');
     
+    // URL input handler
+    if (imageUrlInput) {
+        imageUrlInput.addEventListener('input', function(e) {
+            const url = e.target.value.trim();
+            if (url) {
+                previewImageFromUrl(url);
+            }
+        });
+        
+        // Also allow blur event
+        imageUrlInput.addEventListener('blur', function() {
+            const url = this.value.trim();
+            if (url) {
+                previewImageFromUrl(url);
+            }
+        });
+    }
+    
+    // File input handler (for local files - will convert to data URL)
     if (imageFileInput) {
         imageFileInput.addEventListener('change', function(e) {
             const file = e.target.files[0];
@@ -50,106 +74,105 @@ function setupImageUpload() {
             }
             
             // Validate file type
-            const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+            const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
             if (!validTypes.includes(file.type)) {
-                showMessage('Please select a valid image file (JPG, PNG, GIF)', 'error');
+                showMessage('Please select a valid image file (JPG, PNG, GIF, WebP)', 'error');
                 resetImageUpload();
                 return;
             }
             
-            // Validate file size (2MB max)
-            if (file.size > 2 * 1024 * 1024) {
-                showMessage('Image size should be less than 2MB', 'error');
+            // Validate file size (5MB max for data URL)
+            if (file.size > 5 * 1024 * 1024) {
+                showMessage('Image size should be less than 5MB for data URL conversion', 'error');
                 resetImageUpload();
                 return;
             }
             
-            selectedImageFile = file;
-            
-            // Update file info
-            const fileSize = (file.size / 1024).toFixed(2);
-            fileInfo.innerHTML = `
-                <strong>Selected:</strong> ${file.name}<br>
-                <strong>Size:</strong> ${fileSize} KB<br>
-                <strong>Type:</strong> ${file.type}
-            `;
-            
-            // Show preview
+            // Convert to data URL
             const reader = new FileReader();
             reader.onload = function(e) {
                 imagePreviewUrl = e.target.result;
                 imagePreview.src = imagePreviewUrl;
                 imagePreview.style.display = 'block';
                 previewPlaceholder.style.display = 'none';
+                
+                // Show info
+                showMessage('Image converted to data URL. Better to use URL option for production.', 'info');
             };
             reader.readAsDataURL(file);
         });
     }
+}
+
+// Preview image from URL
+function previewImageFromUrl(url) {
+    const imagePreview = document.getElementById('imagePreviewImg');
+    const previewPlaceholder = document.querySelector('.image-preview-placeholder');
+    const imageUrlInput = document.getElementById('productImageUrl');
     
-    // Also setup edit image upload
-    const editImageFileInput = document.getElementById('editProductImageFile');
-    if (editImageFileInput) {
-        editImageFileInput.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const editImagePreview = document.getElementById('editImagePreviewImg');
-                    if (editImagePreview) {
-                        editImagePreview.src = e.target.result;
-                        editImagePreview.style.display = 'block';
-                        document.querySelector('#editProductModal .image-preview-placeholder').style.display = 'none';
-                    }
-                };
-                reader.readAsDataURL(file);
-            }
-        });
+    if (!url || url.trim() === '') {
+        if (imagePreview) {
+            imagePreview.src = '';
+            imagePreview.style.display = 'none';
+        }
+        if (previewPlaceholder) {
+            previewPlaceholder.style.display = 'flex';
+        }
+        return;
     }
+    
+    // Validate URL format
+    try {
+        new URL(url);
+    } catch (e) {
+        showMessage('Please enter a valid URL (e.g., https://example.com/image.jpg)', 'error');
+        if (imageUrlInput) imageUrlInput.focus();
+        return;
+    }
+    
+    // Create a test image to check if it loads
+    const testImage = new Image();
+    testImage.onload = function() {
+        // Image loaded successfully
+        imagePreviewUrl = url;
+        
+        // Update preview
+        if (imagePreview) {
+            imagePreview.src = url;
+            imagePreview.style.display = 'block';
+        }
+        if (previewPlaceholder) {
+            previewPlaceholder.style.display = 'none';
+        }
+        
+        showMessage('✓ Image URL is valid', 'success');
+    };
+    
+    testImage.onerror = function() {
+        showMessage('❌ Cannot load image from this URL. Please check the link.', 'error');
+        if (imageUrlInput) imageUrlInput.focus();
+    };
+    
+    testImage.src = url;
 }
 
 // Reset image upload
 function resetImageUpload() {
-    selectedImageFile = null;
-    imagePreviewUrl = null;
-    
     const imageFileInput = document.getElementById('productImageFile');
+    const imageUrlInput = document.getElementById('productImageUrl');
     const imagePreview = document.getElementById('imagePreviewImg');
     const previewPlaceholder = document.querySelector('.image-preview-placeholder');
-    const fileInfo = document.getElementById('fileInfo');
     
     if (imageFileInput) imageFileInput.value = '';
+    if (imageUrlInput) imageUrlInput.value = '';
+    
     if (imagePreview) {
         imagePreview.src = '';
         imagePreview.style.display = 'none';
     }
-    if (previewPlaceholder) previewPlaceholder.style.display = 'flex';
-    if (fileInfo) fileInfo.innerHTML = 'Max size: 2MB | Formats: JPG, PNG, GIF';
-}
-
-// Upload image - NO Firebase Storage (uses placeholder)
-async function uploadImageToStorage(file, productId) {
-    try {
-        if (!file) {
-            // Use default placeholder
-            return "https://via.placeholder.com/600x400/cccccc/969696?text=No+Image+Selected";
-        }
-        
-        console.log('⚠️ Firebase Storage not available - using placeholder image');
-        console.log('To enable real image uploads:');
-        console.log('1. Add billing to your Firebase project');
-        console.log('2. Enable Firebase Storage');
-        console.log('3. Update this function to use firebase.storage()');
-        
-        // Generate a unique placeholder URL
-        const timestamp = Date.now();
-        const placeholderText = encodeURIComponent('Product+Image+' + timestamp);
-        const placeholderUrl = `https://via.placeholder.com/600x400/cccccc/969696?text=${placeholderText}`;
-        
-        return placeholderUrl;
-        
-    } catch (error) {
-        console.error('Error in image upload:', error);
-        return "https://via.placeholder.com/600x400/cccccc/969696?text=Error+Uploading";
+    
+    if (previewPlaceholder) {
+        previewPlaceholder.style.display = 'flex';
     }
 }
 
@@ -254,9 +277,16 @@ async function handleAddProduct(e) {
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         };
         
-        // Upload image if selected
-        if (selectedImageFile) {
-            productData.image = await uploadImageToStorage(selectedImageFile, null);
+        // Get image from URL input or data URL
+        const imageUrlInput = document.getElementById('productImageUrl');
+        const imageFileInput = document.getElementById('productImageFile');
+
+        if (imageUrlInput && imageUrlInput.value.trim()) {
+            // Use URL from input
+            productData.image = imageUrlInput.value.trim();
+        } else if (imageFileInput && imageFileInput.files[0]) {
+            // Use data URL from file upload
+            productData.image = imagePreviewUrl || "https://via.placeholder.com/600x400/cccccc/969696?text=No+Image";
         } else {
             // Use default placeholder
             productData.image = "https://via.placeholder.com/600x400/cccccc/969696?text=No+Image";
@@ -289,6 +319,7 @@ async function handleAddProduct(e) {
 
 // Edit product
 async function editProduct(productId) {
+    console.log('editProduct called with ID:', productId);
     showLoading(true);
     
     try {
@@ -310,152 +341,237 @@ async function editProduct(productId) {
 
 // Show edit product modal
 function showEditProductModal(productId, product) {
+    console.log('Showing edit modal for product:', productId);
+    
     const modalHTML = `
-        <div class="modal" id="editProductModal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>Edit Product</h3>
-                    <button class="modal-close" onclick="closeModal('editProductModal')">&times;</button>
+        <form id="editProductForm">
+            <input type="hidden" id="editProductId" value="${productId}">
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Product Name *</label>
+                    <input type="text" id="editProductName" value="${product.name || ''}" required>
                 </div>
-                <div class="modal-body">
-                    <form id="editProductForm">
-                        <input type="hidden" id="editProductId" value="${productId}">
-                        
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Product Name *</label>
-                                <input type="text" id="editProductName" value="${product.name || ''}" required>
-                            </div>
-                            <div class="form-group">
-                                <label>Brand *</label>
-                                <select id="editProductBrand" required>
-                                    <option value="NIKE" ${product.brand === 'NIKE' ? 'selected' : ''}>NIKE</option>
-                                    <option value="ADIDAS" ${product.brand === 'ADIDAS' ? 'selected' : ''}>ADIDAS</option>
-                                    <option value="PUMA" ${product.brand === 'PUMA' ? 'selected' : ''}>PUMA</option>
-                                    <option value="REEBOK" ${product.brand === 'REEBOK' ? 'selected' : ''}>REEBOK</option>
-                                    <option value="NEW BALANCE" ${product.brand === 'NEW BALANCE' ? 'selected' : ''}>NEW BALANCE</option>
-                                    <option value="CONVERSE" ${product.brand === 'CONVERSE' ? 'selected' : ''}>CONVERSE</option>
-                                    <option value="VANS" ${product.brand === 'VANS' ? 'selected' : ''}>VANS</option>
-                                </select>
-                            </div>
-                        </div>
-                        
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Category *</label>
-                                <select id="editProductCategory" required>
-                                    <option value="Running" ${product.category === 'Running' ? 'selected' : ''}>Running</option>
-                                    <option value="Basketball" ${product.category === 'Basketball' ? 'selected' : ''}>Basketball</option>
-                                    <option value="Lifestyle" ${product.category === 'Lifestyle' ? 'selected' : ''}>Lifestyle</option>
-                                    <option value="Training" ${product.category === 'Training' ? 'selected' : ''}>Training</option>
-                                    <option value="Sneakers" ${product.category === 'Sneakers' ? 'selected' : ''}>Sneakers</option>
-                                    <option value="Casual" ${product.category === 'Casual' ? 'selected' : ''}>Casual</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Gender *</label>
-                                <select id="editProductGender" required>
-                                    <option value="Men" ${product.gender === 'Men' ? 'selected' : ''}>Men</option>
-                                    <option value="Women" ${product.gender === 'Women' ? 'selected' : ''}>Women</option>
-                                    <option value="Unisex" ${product.gender === 'Unisex' ? 'selected' : ''}>Unisex</option>
-                                    <option value="Kids" ${product.gender === 'Kids' ? 'selected' : ''}>Kids</option>
-                                </select>
-                            </div>
-                        </div>
-                        
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Price *</label>
-                                <input type="number" id="editProductPrice" step="0.01" min="0" value="${product.price || 0}" required>
-                            </div>
-                            <div class="form-group">
-                                <label>Stock Quantity *</label>
-                                <input type="number" id="editProductStock" min="0" value="${product.stock || 0}" required>
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label>Description</label>
-                            <textarea id="editProductDescription" rows="3">${product.description || ''}</textarea>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label>Product Image</label>
-                            <div class="image-upload-container">
-                                <div class="image-preview" id="editImagePreview">
-                                    ${product.image ? `
-                                        <img src="${product.image}" id="editImagePreviewImg" style="max-width: 200px; max-height: 200px; border-radius: 8px;">
-                                    ` : `
-                                        <div class="image-preview-placeholder">
-                                            <i class="fas fa-image"></i>
-                                            <p>No image selected</p>
-                                        </div>
-                                    `}
-                                </div>
-                                <div class="upload-controls">
-                                    <input type="file" id="editProductImageFile" accept="image/*" style="display: none;">
-                                    <button type="button" class="secondary-btn" onclick="document.getElementById('editProductImageFile').click()">
-                                        <i class="fas fa-upload"></i> Change Image
-                                    </button>
-                                    <div class="file-info" id="editFileInfo" style="margin-top: 10px; font-size: 12px; color: #666;">
-                                        Leave empty to keep current image
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Sizes (comma separated)</label>
-                                <input type="text" id="editProductSizes" value="${(product.sizes || []).join(', ')}" placeholder="7,8,9,10,11,12">
-                            </div>
-                            <div class="form-group">
-                                <label>Colors (comma separated)</label>
-                                <input type="text" id="editProductColors" value="${(product.colors || []).join(', ')}" placeholder="Black,White,Red">
-                            </div>
-                        </div>
-                        
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Rating (0-5)</label>
-                                <input type="number" id="editProductRating" min="0" max="5" step="0.1" value="${product.rating || 4.5}">
-                            </div>
-                            <div class="form-group">
-                                <label>Review Count</label>
-                                <input type="number" id="editProductReviews" min="0" value="${product.reviews || 0}">
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label>
-                                <input type="checkbox" id="editProductFeatured" ${product.featured ? 'checked' : ''}> 
-                                Featured Product
-                            </label>
-                        </div>
-                        
-                        <div class="form-actions">
-                            <button type="button" class="secondary-btn" onclick="closeModal('editProductModal')">Cancel</button>
-                            <button type="submit" class="primary-btn">Update Product</button>
-                        </div>
-                    </form>
+                <div class="form-group">
+                    <label>Brand *</label>
+                    <select id="editProductBrand" required>
+                        <option value="NIKE" ${product.brand === 'NIKE' ? 'selected' : ''}>NIKE</option>
+                        <option value="ADIDAS" ${product.brand === 'ADIDAS' ? 'selected' : ''}>ADIDAS</option>
+                        <option value="PUMA" ${product.brand === 'PUMA' ? 'selected' : ''}>PUMA</option>
+                        <option value="REEBOK" ${product.brand === 'REEBOK' ? 'selected' : ''}>REEBOK</option>
+                        <option value="NEW BALANCE" ${product.brand === 'NEW BALANCE' ? 'selected' : ''}>NEW BALANCE</option>
+                        <option value="CONVERSE" ${product.brand === 'CONVERSE' ? 'selected' : ''}>CONVERSE</option>
+                        <option value="VANS" ${product.brand === 'VANS' ? 'selected' : ''}>VANS</option>
+                    </select>
                 </div>
             </div>
-        </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Category *</label>
+                    <select id="editProductCategory" required>
+                        <option value="Running" ${product.category === 'Running' ? 'selected' : ''}>Running</option>
+                        <option value="Basketball" ${product.category === 'Basketball' ? 'selected' : ''}>Basketball</option>
+                        <option value="Lifestyle" ${product.category === 'Lifestyle' ? 'selected' : ''}>Lifestyle</option>
+                        <option value="Training" ${product.category === 'Training' ? 'selected' : ''}>Training</option>
+                        <option value="Sneakers" ${product.category === 'Sneakers' ? 'selected' : ''}>Sneakers</option>
+                        <option value="Casual" ${product.category === 'Casual' ? 'selected' : ''}>Casual</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Gender *</label>
+                    <select id="editProductGender" required>
+                        <option value="Men" ${product.gender === 'Men' ? 'selected' : ''}>Men</option>
+                        <option value="Women" ${product.gender === 'Women' ? 'selected' : ''}>Women</option>
+                        <option value="Unisex" ${product.gender === 'Unisex' ? 'selected' : ''}>Unisex</option>
+                        <option value="Kids" ${product.gender === 'Kids' ? 'selected' : ''}>Kids</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Price *</label>
+                    <input type="number" id="editProductPrice" step="0.01" min="0" value="${product.price || 0}" required>
+                </div>
+                <div class="form-group">
+                    <label>Stock Quantity *</label>
+                    <input type="number" id="editProductStock" min="0" value="${product.stock || 0}" required>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>Description</label>
+                <textarea id="editProductDescription" rows="3">${product.description || ''}</textarea>
+            </div>
+            
+            <div class="form-group">
+                <label>Product Image</label>
+                <div class="image-upload-container">
+                    <div class="image-preview" id="editImagePreview">
+                        ${product.image ? `
+                            <img src="${product.image}" id="editImagePreviewImg" style="max-width: 200px; max-height: 200px; border-radius: 8px;">
+                        ` : `
+                            <div class="image-preview-placeholder">
+                                <i class="fas fa-image"></i>
+                                <p>No image selected</p>
+                            </div>
+                        `}
+                    </div>
+                    <div class="upload-controls">
+                        <!-- Option 1: URL Input -->
+                        <div class="url-upload-option">
+                            <label style="display: block; margin-bottom: 5px; font-weight: bold;">Option 1: Paste Image URL</label>
+                            <input type="url" 
+                                   id="editProductImageUrl" 
+                                   placeholder="https://example.com/image.jpg"
+                                   value="${product.image && product.image.startsWith('http') ? product.image : ''}"
+                                   style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 10px;"
+                                   oninput="previewEditImageFromUrl(this.value)">
+                            <small style="color: #666; display: block; margin-bottom: 10px;">
+                                Leave empty to keep current image
+                            </small>
+                        </div>
+                        
+                        <div class="or-separator" style="text-align: center; margin: 15px 0;">
+                            <span style="background: white; padding: 0 10px; color: #666;">OR</span>
+                            <hr style="border: none; border-top: 1px solid #ddd; margin-top: -8px;">
+                        </div>
+                        
+                        <!-- Option 2: File Upload -->
+                        <div class="file-upload-option">
+                            <label style="display: block; margin-bottom: 5px; font-weight: bold;">Option 2: Upload New Image</label>
+                            <input type="file" id="editProductImageFile" accept="image/*" style="display: none;">
+                            <button type="button" class="secondary-btn" onclick="document.getElementById('editProductImageFile').click()" style="width: 100%;">
+                                <i class="fas fa-upload"></i> Choose Local Image
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Sizes (comma separated)</label>
+                    <input type="text" id="editProductSizes" value="${(product.sizes || []).join(', ')}" placeholder="7,8,9,10,11,12">
+                </div>
+                <div class="form-group">
+                    <label>Colors (comma separated)</label>
+                    <input type="text" id="editProductColors" value="${(product.colors || []).join(', ')}" placeholder="Black,White,Red">
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Rating (0-5)</label>
+                    <input type="number" id="editProductRating" min="0" max="5" step="0.1" value="${product.rating || 4.5}">
+                </div>
+                <div class="form-group">
+                    <label>Review Count</label>
+                    <input type="number" id="editProductReviews" min="0" value="${product.reviews || 0}">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="editProductFeatured" ${product.featured ? 'checked' : ''}> 
+                    Featured Product
+                </label>
+            </div>
+            
+            <div class="form-actions">
+                <button type="button" class="secondary-btn" onclick="closeModal('editProductModal')">Cancel</button>
+                <button type="submit" class="primary-btn">Update Product</button>
+            </div>
+        </form>
     `;
     
-    // Remove existing modal
-    const existingModal = document.getElementById('editProductModal');
-    if (existingModal) existingModal.remove();
+    // Set modal content
+    const modalBody = document.querySelector('#editProductModal .modal-body');
+    if (modalBody) {
+        modalBody.innerHTML = modalHTML;
+    }
     
-    // Add new modal
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    // Show modal
+    document.getElementById('editProductModal').style.display = 'flex';
     document.body.style.overflow = 'hidden';
     
-    // Add event listener for form submission
-    document.getElementById('editProductForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        updateProduct(productId);
-    });
+    // Add event listener for edit form submission
+    const editForm = document.getElementById('editProductForm');
+    if (editForm) {
+        editForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            updateProduct(productId);
+        });
+    }
+    
+    // Setup edit image upload
+    const editImageFileInput = document.getElementById('editProductImageFile');
+    if (editImageFileInput) {
+        editImageFileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const editImagePreview = document.getElementById('editImagePreviewImg');
+                    const editPlaceholder = document.querySelector('#editImagePreview .image-preview-placeholder');
+                    if (editImagePreview) {
+                        editImagePreview.src = e.target.result;
+                        editImagePreview.style.display = 'block';
+                    }
+                    if (editPlaceholder) {
+                        editPlaceholder.style.display = 'none';
+                    }
+                    showMessage('Image converted to data URL. Better to use URL option for production.', 'info');
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+}
+
+// Preview edit image from URL
+function previewEditImageFromUrl(url) {
+    const editImagePreview = document.getElementById('editImagePreviewImg');
+    const editPlaceholder = document.querySelector('#editImagePreview .image-preview-placeholder');
+    
+    if (!url || url.trim() === '') {
+        // Show placeholder if URL is empty
+        if (editImagePreview) {
+            editImagePreview.style.display = 'none';
+        }
+        if (editPlaceholder) {
+            editPlaceholder.style.display = 'flex';
+        }
+        return;
+    }
+    
+    // Validate URL format
+    try {
+        new URL(url);
+    } catch (e) {
+        showMessage('Please enter a valid URL (e.g., https://example.com/image.jpg)', 'error');
+        return;
+    }
+    
+    // Create a test image to check if it loads
+    const testImage = new Image();
+    testImage.onload = function() {
+        // Update preview
+        if (editImagePreview) {
+            editImagePreview.src = url;
+            editImagePreview.style.display = 'block';
+        }
+        if (editPlaceholder) {
+            editPlaceholder.style.display = 'none';
+        }
+    };
+    
+    testImage.onerror = function() {
+        showMessage('Cannot load image from this URL', 'error');
+    };
+    
+    testImage.src = url;
 }
 
 // Update product
@@ -483,11 +599,27 @@ async function updateProduct(productId) {
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         };
         
-        // Update image if changed
-        const editImageFile = document.getElementById('editProductImageFile').files[0];
-        if (editImageFile) {
-            productData.image = await uploadImageToStorage(editImageFile, productId);
+        // Update image if changed (URL or file)
+        const editImageUrlInput = document.getElementById('editProductImageUrl');
+        const editImageFileInput = document.getElementById('editProductImageFile');
+
+        if (editImageUrlInput && editImageUrlInput.value.trim()) {
+            // Use new URL from input
+            productData.image = editImageUrlInput.value.trim();
+        } else if (editImageFileInput && editImageFileInput.files[0]) {
+            // Convert file to data URL
+            const file = editImageFileInput.files[0];
+            const reader = new FileReader();
+            
+            await new Promise((resolve) => {
+                reader.onload = function(e) {
+                    productData.image = e.target.result;
+                    resolve();
+                };
+                reader.readAsDataURL(file);
+            });
         }
+        // If neither is provided, the existing image will be kept (not included in update)
         
         await db.collection('products').doc(productId).update(productData);
         
@@ -573,6 +705,15 @@ function initializeEventListeners() {
             }
         });
     });
+    
+    // Close modal when clicking outside
+    document.querySelectorAll('.modal').forEach(modal => {
+        modal.addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal(this.id);
+            }
+        });
+    });
 }
 
 // Toggle select all checkboxes
@@ -597,10 +738,10 @@ function searchProducts(e) {
 // View product details
 async function viewProduct(productId) {
     try {
-        const product = await firebaseDataService.getProductById(productId);
-        if (product) {
+        const productDoc = await db.collection('products').doc(productId).get();
+        if (productDoc.exists) {
+            const product = productDoc.data();
             showMessage(`Viewing: ${product.name}`, 'success');
-            // You could also open a modal with product details here
         }
     } catch (error) {
         console.error('Error viewing product:', error);
@@ -664,17 +805,17 @@ async function loadDashboardData() {
         document.getElementById('totalOrders').textContent = totalOrders;
         
         // Load total users
-        const usersSnapshot = await db.collection('users').get();
-        const totalUsers = usersSnapshot.size;
-        document.getElementById('totalUsers').textContent = totalUsers;
+        //const usersSnapshot = await db.collection('users').get();
+        //const totalUsers = usersSnapshot.size;
+       // document.getElementById('totalUsers').textContent = totalUsers;
         
         // Load total revenue (calculate from orders)
-        let totalRevenue = 0;
-        ordersSnapshot.forEach(doc => {
-            const order = doc.data();
-            totalRevenue += order.totals ? order.totals.total : 0;
-        });
-        document.getElementById('totalRevenue').textContent = `₱${totalRevenue.toFixed(2)}`;
+        //let totalRevenue = 0;
+        //ordersSnapshot.forEach(doc => {
+           // const order = doc.data();
+            //totalRevenue += order.totals ? order.totals.total : 0;
+       // });
+       // document.getElementById('totalRevenue').textContent = `₱${totalRevenue.toFixed(2)}`;
         
         // Load recent products
         loadRecentProducts();
@@ -693,6 +834,7 @@ async function loadDashboardData() {
 // Load all products
 async function loadProducts() {
     showLoading(true);
+    console.log('Loading products...');
     
     try {
         const snapshot = await db.collection('products').orderBy('createdAt', 'desc').get();
@@ -700,6 +842,8 @@ async function loadProducts() {
             id: doc.id,
             ...doc.data()
         }));
+        
+        console.log('Products loaded:', products.length);
         
         renderProductsTable();
         setupPagination();
@@ -746,7 +890,7 @@ function renderProductsTable(filteredProducts = products) {
             </td>
             <td>
                 <div class="action-buttons">
-                    <button class="action-btn edit-btn" onclick="editProduct('${product.id}')">
+                    <button class="action-btn edit-btn" onclick="window.editProduct('${product.id}')">
                         <i class="fas fa-edit"></i>
                     </button>
                     <button class="action-btn delete-btn" onclick="confirmDelete('${product.id}')">
@@ -845,7 +989,7 @@ function renderOrdersTable(orders) {
             'Unknown' : 
             'Unknown';
         
-        // Calculate total - FIXED ERROR HERE
+        // Calculate total
         const total = order.totals && order.totals.total ? order.totals.total : 0;
         
         // Get status badge
@@ -1701,5 +1845,7 @@ window.loadProducts = loadProducts;
 window.openImagePreview = openImagePreview;
 window.changePage = changePage;
 window.applyBulkAction = applyBulkAction;
+window.previewImageFromUrl = previewImageFromUrl;
+window.previewEditImageFromUrl = previewEditImageFromUrl;
 
-console.log('✅ Admin.js loaded with complete orders management and all functions');
+console.log('✅ Admin.js loaded with URL-based image upload and all functions');
