@@ -90,13 +90,42 @@
                     <div class="filter-option">
                         <label>
                             <input type="checkbox" data-filter="brand" value="NIKE">
-                            NIKE (382)
+                            NIKE (0)
                         </label>
                     </div>
                     <div class="filter-option">
                         <label>
                             <input type="checkbox" data-filter="brand" value="ADIDAS">
-                            ADIDAS (180)
+                            ADIDAS (0)
+                        </label>
+                    </div>
+                    <div class="filter-option">
+                        <label>
+                            <input type="checkbox" data-filter="brand" value="PUMA">
+                            PUMA (0)
+                        </label>
+                    </div>
+                    <div class="filter-option">
+                        <label>
+                            <input type="checkbox" data-filter="brand" value="REEBOK">
+                            REEBOK (0)
+                        </label>
+                    </div>
+                    <div class="filter-option">
+                        <label>
+                            <input type="checkbox" data-filter="brand" value="NEW BALANCE">
+                            NEW BALANCE (0)
+                        </label>
+                    </div>
+                    <div class="filter-option">
+                        <label>
+                            <input type="checkbox" data-filter="brand" value="CONVERSE">
+                            CONVERSE (0)
+                        </label>
+                    </div><div class="filter-option">
+                        <label>
+                            <input type="checkbox" data-filter="brand" value="VANS">
+                            VANS (0)
                         </label>
                     </div>
                 </div>
@@ -280,6 +309,27 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }, 2000);
 });
+
+setInterval(() => {
+    if (firebase.auth().currentUser) {
+        const db = firebase.firestore();
+        
+        // Try multiple queries
+        Promise.all([
+            db.collection('orders').where('userId', '==', firebase.auth().currentUser.uid).get().catch(() => ({ size: 0 })),
+            db.collection('orders').where('userEmail', '==', firebase.auth().currentUser.email).get().catch(() => ({ size: 0 }))
+        ]).then(([userIdOrders, emailOrders]) => {
+            const totalOrders = userIdOrders.size + emailOrders.size;
+            
+            // Update all badges
+            document.querySelectorAll('.orders-btn .icon-badge').forEach(badge => {
+                badge.textContent = totalOrders;
+                badge.style.display = totalOrders > 0 ? 'flex' : 'none';
+            });
+        });
+    }
+}, 5000); // Check every 5 seconds
+
 </script>
 </body>
 </html>

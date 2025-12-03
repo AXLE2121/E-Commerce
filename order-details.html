@@ -1,0 +1,47 @@
+<!-- order-details.html (simplified version) -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Details - Foot Locker</title>
+    <link rel="stylesheet" href="styles/style.css">
+    <link rel="stylesheet" href="styles/my-orders.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <header class="header">
+        <!-- Same header as other pages -->
+    </header>
+    
+    <div class="order-details-container">
+        <div class="container">
+            <a href="my-orders.html" class="back-btn">
+                <i class="fas fa-arrow-left"></i> Back to Orders
+            </a>
+            <div id="orderDetails">
+                <!-- Order details will be loaded here -->
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Load order details based on URL parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        const orderId = urlParams.get('orderId');
+        
+        if (orderId) {
+            // Fetch and display order details
+            // You can implement this similar to my-orders.js
+        } else {
+            document.getElementById('orderDetails').innerHTML = `
+                <div class="error">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <h3>Order Not Found</h3>
+                    <p>No order ID specified.</p>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>

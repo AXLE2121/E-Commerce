@@ -236,9 +236,6 @@ function createProductCard(product) {
                 <p class="product-desc">${product.description ? (product.description.substring(0, 60) + (product.description.length > 60 ? '...' : '')) : 'No description available'}</p>
                 <div class="product-footer">
                     <div class="product-price">${formattedPrice}</div>
-                    <button class="add-to-cart-btn" data-product-id="${product.id}" ${!isLoggedIn ? 'disabled style="opacity: 0.5; cursor: not-allowed;" title="Login to Add to Cart"' : ''}>
-                        <i class="fas fa-shopping-cart"></i> Add to Cart
-                    </button>
                 </div>
             </div>
         </div>
