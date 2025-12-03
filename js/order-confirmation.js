@@ -1,4 +1,4 @@
-// order-confirmation.js - COMPLETE FIXED VERSION
+// order-confirmation.js - COMPLETE FIXED VERSION WITH CENTER ALIGNMENT
 console.log('=== ORDER CONFIRMATION LOADED ===');
 
 // Global variables
@@ -152,14 +152,14 @@ async function fetchOrderFromFirestore(orderId) {
         const container = document.getElementById('confirmationContainer');
         if (container && !container.innerHTML.includes('Order Confirmed')) {
             const errorDiv = document.createElement('div');
-            errorDiv.style.cssText = 'background: #ffebee; color: #c62828; padding: 10px; border-radius: 5px; margin-top: 10px; font-size: 14px;';
+            errorDiv.style.cssText = 'background: #ffebee; color: #c62828; padding: 10px; border-radius: 5px; margin: 10px auto; font-size: 14px; text-align: center; max-width: 800px;';
             errorDiv.innerHTML = `<i class="fas fa-info-circle"></i> Note: Could not load latest order status. Showing cached data.`;
             container.appendChild(errorDiv);
         }
     }
 }
 
-// Display order confirmation - MAIN FUNCTION (MUST BE DEFINED)
+// Display order confirmation - MAIN FUNCTION
 function displayOrderConfirmation(orderData, orderId, fromFirestore = false) {
     console.log('Displaying order confirmation, from Firestore:', fromFirestore);
     
@@ -216,174 +216,184 @@ function displayOrderConfirmation(orderData, orderId, fromFirestore = false) {
     
     // Generate HTML
     container.innerHTML = `
-        <div class="confirmation-header" style="text-align: center; margin-bottom: 40px;">
-            <div class="confirmation-icon" style="width: 80px; height: 80px; background: #4caf50; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
-                <i class="fas fa-check fa-2x" style="color: white;"></i>
-            </div>
-            <h1 style="color: #4caf50; margin-bottom: 10px;">Order Confirmed!</h1>
-            <p style="color: #666; font-size: 18px;">Thank you for your purchase${customer.firstName ? `, ${customer.firstName}` : ''}!</p>
-            ${fromFirestore ? 
-                '<p style="color: #666; font-size: 14px; background: #e8f5e8; padding: 5px 10px; border-radius: 4px; display: inline-block;"><i class="fas fa-sync"></i> Live data from your account</p>' : 
-                '<p style="color: #666; font-size: 14px;"><i class="fas fa-info-circle"></i> Showing order details from confirmation</p>'
-            }
-        </div>
-        
-        <div class="confirmation-details" style="background: #f9f9f9; border-radius: 12px; padding: 30px; margin-bottom: 30px;">
-            <h2 style="margin-bottom: 20px; color: #333; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px;">Order Summary</h2>
-            
-            <!-- Order Info -->
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px;">
-                <div>
-                    <h3 style="color: #666; font-size: 14px; margin-bottom: 5px;">ORDER NUMBER</h3>
-                    <p style="font-size: 18px; font-weight: bold; color: #333; word-break: break-all;">${orderId}</p>
+        <div style="width: 100%; max-width: 800px; margin: 0 auto;">
+            <div class="confirmation-header" style="text-align: center; margin-bottom: 40px;">
+                <div class="confirmation-icon" style="width: 80px; height: 80px; background: #4caf50; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+                    <i class="fas fa-check fa-2x" style="color: white;"></i>
                 </div>
-                <div>
-                    <h3 style="color: #666; font-size: 14px; margin-bottom: 5px;">ORDER DATE</h3>
-                    <p style="font-size: 16px; color: #333;">${orderDate}</p>
-                </div>
-                <div>
-                    <h3 style="color: #666; font-size: 14px; margin-bottom: 5px;">PAYMENT METHOD</h3>
-                    <p style="font-size: 16px; color: #333;">
-                        ${payment.method === 'cod' ? 'Cash on Delivery' : 
-                          payment.method === 'gcash' ? 'GCash' : 
-                          payment.method === 'card' ? 'Credit/Debit Card' : 
-                          payment.method || 'Not specified'}
-                    </p>
-                </div>
-                <div>
-                    <h3 style="color: #666; font-size: 14px; margin-bottom: 5px;">ORDER STATUS</h3>
-                    <p style="font-size: 16px; color: #d50000; font-weight: bold;">
-                        ${getStatusBadge(status)}
-                    </p>
-                </div>
+                <h1 style="color: #4caf50; margin-bottom: 10px; font-size: 2.5rem;">Order Confirmed!</h1>
+                <p style="color: #666; font-size: 18px;">Thank you for your purchase${customer.firstName ? `, ${customer.firstName}` : ''}!</p>
+                ${fromFirestore ? 
+                    '<p style="color: #666; font-size: 14px; background: #e8f5e8; padding: 5px 10px; border-radius: 4px; display: inline-block;"><i class="fas fa-sync"></i> Live data from your account</p>' : 
+                    '<p style="color: #666; font-size: 14px;"><i class="fas fa-info-circle"></i> Showing order details from confirmation</p>'
+                }
             </div>
             
-            <!-- Customer Info -->
-            ${customer.firstName || customer.email ? `
-            <div style="margin-bottom: 30px; padding: 20px; background: white; border-radius: 8px;">
-                <h3 style="color: #333; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
-                    <i class="fas fa-user"></i> Customer Information
-                </h3>
-                ${customer.firstName ? `<p style="margin: 5px 0; color: #666;"><strong>Name:</strong> ${customer.firstName} ${customer.lastName || ''}</p>` : ''}
-                ${customer.email ? `<p style="margin: 5px 0; color: #666;"><strong>Email:</strong> ${customer.email}</p>` : ''}
-                ${customer.phone ? `<p style="margin: 5px 0; color: #666;"><strong>Phone:</strong> ${customer.phone}</p>` : ''}
-                ${customer.shippingAddress ? `
-                    <p style="margin: 5px 0; color: #666;"><strong>Shipping Address:</strong></p>
-                    <p style="margin: 5px 0; color: #666; padding-left: 20px;">
-                        ${customer.shippingAddress.street || ''}<br>
-                        ${customer.shippingAddress.city || ''}, ${customer.shippingAddress.zipCode || ''}<br>
-                        ${customer.shippingAddress.country || 'Philippines'}
-                    </p>
+            <div class="confirmation-details" style="background: #f9f9f9; border-radius: 12px; padding: 30px; margin-bottom: 30px;">
+                <h2 style="margin-bottom: 20px; color: #333; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px; font-size: 1.8rem; text-align: center;">Order Summary</h2>
+                
+                <!-- Order Info Grid -->
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 30px;">
+                    <div style="text-align: center; padding: 15px; background: white; border-radius: 8px; border: 1px solid #e0e0e0;">
+                        <h3 style="color: #666; font-size: 12px; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px;">ORDER NUMBER</h3>
+                        <p style="font-size: 16px; font-weight: bold; color: #333; word-break: break-all; margin: 0;">${orderId}</p>
+                    </div>
+                    <div style="text-align: center; padding: 15px; background: white; border-radius: 8px; border: 1px solid #e0e0e0;">
+                        <h3 style="color: #666; font-size: 12px; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px;">ORDER DATE</h3>
+                        <p style="font-size: 16px; color: #333; margin: 0;">${orderDate}</p>
+                    </div>
+                    <div style="text-align: center; padding: 15px; background: white; border-radius: 8px; border: 1px solid #e0e0e0;">
+                        <h3 style="color: #666; font-size: 12px; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px;">PAYMENT METHOD</h3>
+                        <p style="font-size: 16px; color: #333; margin: 0;">
+                            ${payment.method === 'cod' ? 'Cash on Delivery' : 
+                              payment.method === 'gcash' ? 'GCash' : 
+                              payment.method === 'card' ? 'Credit/Debit Card' : 
+                              payment.method || 'Not specified'}
+                        </p>
+                    </div>
+                    <div style="text-align: center; padding: 15px; background: white; border-radius: 8px; border: 1px solid #e0e0e0;">
+                        <h3 style="color: #666; font-size: 12px; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px;">ORDER STATUS</h3>
+                        <p style="font-size: 16px; color: #d50000; font-weight: bold; margin: 0;">
+                            ${getStatusBadge(status)}
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- Customer Info -->
+                ${customer.firstName || customer.email ? `
+                <div style="margin-bottom: 30px; padding: 20px; background: white; border-radius: 8px; border: 1px solid #e0e0e0;">
+                    <h3 style="color: #333; margin-bottom: 15px; font-size: 1.2rem; text-align: center;">
+                        <i class="fas fa-user"></i> Customer Information
+                    </h3>
+                    <div style="max-width: 500px; margin: 0 auto; text-align: left;">
+                        ${customer.firstName ? `<p style="margin: 10px 0; color: #666;"><strong>Name:</strong> ${customer.firstName} ${customer.lastName || ''}</p>` : ''}
+                        ${customer.email ? `<p style="margin: 10px 0; color: #666;"><strong>Email:</strong> ${customer.email}</p>` : ''}
+                        ${customer.phone ? `<p style="margin: 10px 0; color: #666;"><strong>Phone:</strong> ${customer.phone}</p>` : ''}
+                        ${customer.shippingAddress ? `
+                            <p style="margin: 10px 0; color: #666;"><strong>Shipping Address:</strong></p>
+                            <div style="background: #f5f5f5; padding: 15px; border-radius: 6px; margin-top: 5px;">
+                                <p style="margin: 5px 0; color: #333;">
+                                    ${customer.shippingAddress.street || ''}<br>
+                                    ${customer.shippingAddress.city || ''}, ${customer.shippingAddress.zipCode || ''}<br>
+                                    ${customer.shippingAddress.country || 'Philippines'}
+                                </p>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
                 ` : ''}
+                
+                <!-- Order Items -->
+                <div style="margin-bottom: 30px;">
+                    <h3 style="color: #333; margin-bottom: 15px; font-size: 1.2rem; text-align: center;">
+                        <i class="fas fa-box"></i> Order Items (${products.length})
+                    </h3>
+                    <div style="max-width: 700px; margin: 0 auto;">
+                        ${products.map(item => `
+                            <div style="display: flex; align-items: center; padding: 15px; background: white; border-radius: 8px; margin-bottom: 10px; border: 1px solid #e0e0e0;">
+                                <div style="width: 80px; height: 80px; margin-right: 15px; flex-shrink: 0;">
+                                    <img src="${item.image || 'https://via.placeholder.com/80x80?text=Product'}" 
+                                         alt="${item.name || 'Product'}" 
+                                         style="width: 100%; height: 100%; object-fit: cover; border-radius: 4px;">
+                                </div>
+                                <div style="flex: 1;">
+                                    <div style="display: flex; justify-content: space-between; align-items: start;">
+                                        <div>
+                                            <p style="font-weight: bold; color: #d50000; font-size: 14px; margin-bottom: 5px;">${item.brand || ''}</p>
+                                            <h4 style="font-size: 16px; margin-bottom: 5px;">${item.name || 'Product'}</h4>
+                                            <p style="color: #666; font-size: 14px; margin-bottom: 5px;">
+                                                ${item.size ? `Size: ${item.size} | ` : ''}
+                                                Qty: ${item.quantity || 1}
+                                            </p>
+                                        </div>
+                                        <div style="font-weight: bold; font-size: 18px; color: #333; text-align: right;">
+                                            ₱${((item.price || 0) * (item.quantity || 1)).toFixed(2)}
+                                            ${item.quantity > 1 ? `<br><span style="font-size: 12px; color: #666;">₱${(item.price || 0).toFixed(2)} each</span>` : ''}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                
+                <!-- Order Totals -->
+                <div style="max-width: 500px; margin: 30px auto 0; padding-top: 20px; border-top: 2px solid #e0e0e0;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <span style="color: #666;">Subtotal</span>
+                        <span style="font-weight: bold;">₱${(totals.subtotal || 0).toFixed(2)}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <span style="color: #666;">Shipping</span>
+                        <span style="font-weight: bold;">₱${(totals.shipping || 150).toFixed(2)}</span>
+                    </div>
+                    ${(totals.serviceFee || 0) > 0 ? `
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <span style="color: #666;">Service Fee</span>
+                        <span style="font-weight: bold;">₱${(totals.serviceFee || 0).toFixed(2)}</span>
+                    </div>
+                    ` : ''}
+                    <div style="display: flex; justify-content: space-between; margin-top: 15px; padding-top: 15px; border-top: 1px solid #e0e0e0; font-size: 20px;">
+                        <span style="font-weight: bold;">Total Amount</span>
+                        <span style="font-weight: bold; color: #d50000;">₱${(totals.total || 0).toFixed(2)}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Next Steps -->
+            <div style="background: #e8f5e8; border-radius: 12px; padding: 25px; margin-bottom: 30px; max-width: 800px; margin-left: auto; margin-right: auto;">
+                <h3 style="color: #2e7d32; margin-bottom: 15px; font-size: 1.2rem; text-align: center;">
+                    <i class="fas fa-info-circle"></i> What Happens Next?
+                </h3>
+                <div style="max-width: 600px; margin: 0 auto;">
+                    <ul style="color: #666; line-height: 1.6; padding-left: 20px;">
+                        <li>You will receive an order confirmation email shortly</li>
+                        <li>Your order will be processed within 24 hours</li>
+                        ${payment.method === 'cod' ? 
+                            '<li>Our delivery partner will contact you to schedule delivery</li>' : 
+                            '<li>For GCash/Card payments, please complete the payment process</li>'
+                        }
+                        ${currentUser ? 
+                            '<li>You can track your order status in "My Orders" section</li>' : 
+                            '<li><a href="login.html" style="color: #d50000; text-decoration: none;">Login</a> to track your order status</li>'
+                        }
+                        <li>Expected delivery: 3-5 business days</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- GCash Instructions -->
+            ${payment.method === 'gcash' ? `
+            <div style="background: #e3f2fd; border-radius: 12px; padding: 25px; margin-bottom: 30px; max-width: 800px; margin-left: auto; margin-right: auto;">
+                <h3 style="color: #1976d2; margin-bottom: 15px; font-size: 1.2rem; text-align: center;">
+                    <i class="fas fa-mobile-alt"></i> GCash Payment Instructions
+                </h3>
+                <div style="max-width: 600px; margin: 0 auto;">
+                    <ol style="color: #666; line-height: 1.6; padding-left: 20px;">
+                        <li>Open your GCash app</li>
+                        <li>Go to "Send Money" or "Pay Bills"</li>
+                        <li>Send payment to: <strong>FOOT LOCKER MERCHANT</strong></li>
+                        <li>Amount: <strong>₱${(totals.total || 0).toFixed(2)}</strong></li>
+                        <li>Reference: <strong>${orderId}</strong></li>
+                        <li>Save your transaction receipt</li>
+                        <li>Email the receipt to: support@footlocker.com</li>
+                    </ol>
+                </div>
             </div>
             ` : ''}
             
-            <!-- Order Items -->
-            <div style="margin-bottom: 30px;">
-                <h3 style="color: #333; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
-                    <i class="fas fa-box"></i> Order Items (${products.length})
-                </h3>
-                ${products.map(item => `
-                    <div style="display: flex; align-items: center; padding: 15px; background: white; border-radius: 8px; margin-bottom: 10px; border: 1px solid #e0e0e0;">
-                        <div style="width: 80px; height: 80px; margin-right: 15px; flex-shrink: 0;">
-                            <img src="${item.image || 'https://via.placeholder.com/80x80?text=Product'}" 
-                                 alt="${item.name || 'Product'}" 
-                                 style="width: 100%; height: 100%; object-fit: cover; border-radius: 4px;">
-                        </div>
-                        <div style="flex: 1;">
-                            <div style="display: flex; justify-content: space-between; align-items: start;">
-                                <div>
-                                    <p style="font-weight: bold; color: #d50000; font-size: 14px; margin-bottom: 5px;">${item.brand || ''}</p>
-                                    <h4 style="font-size: 16px; margin-bottom: 5px;">${item.name || 'Product'}</h4>
-                                    <p style="color: #666; font-size: 14px; margin-bottom: 5px;">
-                                        ${item.size ? `Size: ${item.size} | ` : ''}
-                                        Qty: ${item.quantity || 1}
-                                    </p>
-                                </div>
-                                <div style="font-weight: bold; font-size: 18px; color: #333; text-align: right;">
-                                    ₱${((item.price || 0) * (item.quantity || 1)).toFixed(2)}
-                                    ${item.quantity > 1 ? `<br><span style="font-size: 12px; color: #666;">₱${(item.price || 0).toFixed(2)} each</span>` : ''}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `).join('')}
-            </div>
-            
-            <!-- Order Totals -->
-            <div style="border-top: 2px solid #e0e0e0; padding-top: 20px;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                    <span style="color: #666;">Subtotal</span>
-                    <span style="font-weight: bold;">₱${(totals.subtotal || 0).toFixed(2)}</span>
-                </div>
-                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                    <span style="color: #666;">Shipping</span>
-                    <span style="font-weight: bold;">₱${(totals.shipping || 150).toFixed(2)}</span>
-                </div>
-                ${(totals.serviceFee || 0) > 0 ? `
-                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                    <span style="color: #666;">Service Fee</span>
-                    <span style="font-weight: bold;">₱${(totals.serviceFee || 0).toFixed(2)}</span>
-                </div>
-                ` : ''}
-                <div style="display: flex; justify-content: space-between; margin-top: 15px; padding-top: 15px; border-top: 1px solid #e0e0e0; font-size: 20px;">
-                    <span style="font-weight: bold;">Total Amount</span>
-                    <span style="font-weight: bold; color: #d50000;">₱${(totals.total || 0).toFixed(2)}</span>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Next Steps -->
-        <div style="background: #e8f5e8; border-radius: 12px; padding: 25px; margin-bottom: 30px;">
-            <h3 style="color: #2e7d32; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
-                <i class="fas fa-info-circle"></i> What Happens Next?
-            </h3>
-            <ul style="color: #666; line-height: 1.6; padding-left: 20px;">
-                <li>You will receive an order confirmation email shortly</li>
-                <li>Your order will be processed within 24 hours</li>
-                ${payment.method === 'cod' ? 
-                    '<li>Our delivery partner will contact you to schedule delivery</li>' : 
-                    '<li>For GCash/Card payments, please complete the payment process</li>'
-                }
-                ${currentUser ? 
-                    '<li>You can track your order status in "My Orders" section</li>' : 
-                    '<li><a href="login.html" style="color: #d50000; text-decoration: none;">Login</a> to track your order status</li>'
-                }
-                <li>Expected delivery: 3-5 business days</li>
-            </ul>
-        </div>
-        
-        <!-- GCash Instructions -->
-        ${payment.method === 'gcash' ? `
-        <div style="background: #e3f2fd; border-radius: 12px; padding: 25px; margin-bottom: 30px;">
-            <h3 style="color: #1976d2; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
-                <i class="fas fa-mobile-alt"></i> GCash Payment Instructions
-            </h3>
-            <ol style="color: #666; line-height: 1.6; padding-left: 20px;">
-                <li>Open your GCash app</li>
-                <li>Go to "Send Money" or "Pay Bills"</li>
-                <li>Send payment to: <strong>FOOT LOCKER MERCHANT</strong></li>
-                <li>Amount: <strong>₱${(totals.total || 0).toFixed(2)}</strong></li>
-                <li>Reference: <strong>${orderId}</strong></li>
-                <li>Save your transaction receipt</li>
-                <li>Email the receipt to: support@footlocker.com</li>
-            </ol>
-        </div>
-        ` : ''}
-        
-        <!-- Actions -->
-        <div style="text-align: center; margin-top: 40px;">
-            <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
-                <a href="index.html" class="primary-btn" style="display: inline-block; padding: 12px 24px; background: #d50000; color: white; text-decoration: none; border-radius: 6px;">
-                    <i class="fas fa-home"></i> Continue Shopping
-                </a>
-                ${currentUser ? `
-
-                ` : `
-                    <a href="login.html" class="secondary-btn" style="display: inline-block; padding: 12px 24px; background: #333; color: white; text-decoration: none; border-radius: 6px;">
-                        <i class="fas fa-sign-in-alt"></i> Login to Track Order
+            <!-- Actions -->
+            <div style="text-align: center; margin-top: 40px;">
+                <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                    <a href="index.html" class="primary-btn" style="display: inline-block; padding: 12px 24px; background: #d50000; color: white; text-decoration: none; border-radius: 6px; font-size: 16px;">
+                        <i class="fas fa-home"></i> Continue Shopping
                     </a>
-                `}
+                    ${currentUser ? '' : `
+                        <a href="login.html" class="secondary-btn" style="display: inline-block; padding: 12px 24px; background: #333; color: white; text-decoration: none; border-radius: 6px; font-size: 16px;">
+                            <i class="fas fa-sign-in-alt"></i> Login to Track Order
+                        </a>
+                    `}
+                </div>
             </div>
         </div>
     `;
@@ -406,7 +416,7 @@ function showLoadingState() {
     const container = document.getElementById('confirmationContainer');
     if (container) {
         container.innerHTML = `
-            <div style="text-align: center; padding: 60px 20px;">
+            <div style="text-align: center; padding: 60px 20px; max-width: 800px; margin: 0 auto;">
                 <i class="fas fa-spinner fa-spin fa-3x" style="color: #d50000; margin-bottom: 20px;"></i>
                 <p style="color: #666; font-size: 16px;">Loading your order details...</p>
             </div>
@@ -419,12 +429,12 @@ function showError(message) {
     const container = document.getElementById('confirmationContainer');
     if (container) {
         container.innerHTML = `
-            <div style="text-align: center; padding: 40px;">
+            <div style="text-align: center; padding: 40px; max-width: 800px; margin: 0 auto;">
                 <i class="fas fa-exclamation-circle fa-3x" style="color: #e53935; margin-bottom: 20px;"></i>
-                <h3 style="color: #e53935; margin-bottom: 10px;">Error</h3>
-                <p style="color: #666; margin-bottom: 20px;">${message}</p>
+                <h3 style="color: #e53935; margin-bottom: 10px; font-size: 1.5rem;">Error</h3>
+                <p style="color: #666; margin-bottom: 20px; font-size: 16px;">${message}</p>
                 <div style="display: flex; gap: 10px; justify-content: center;">
-                    <a href="index.html" style="display: inline-block; padding: 10px 20px; background: #d50000; color: white; text-decoration: none; border-radius: 4px;">
+                    <a href="index.html" style="display: inline-block; padding: 10px 20px; background: #d50000; color: white; text-decoration: none; border-radius: 4px; font-size: 16px;">
                         <i class="fas fa-home"></i> Back to Home
                     </a>
                 </div>
