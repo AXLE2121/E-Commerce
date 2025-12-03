@@ -31,10 +31,9 @@ function formatCurrency(amount) {
 // Load product from sessionStorage and display order summary
 document.addEventListener('DOMContentLoaded', function() {
     console.log('=== CHECKOUT PAGE LOADED ===');
-    console.log('Checking for checkout data...');
     
-    // Check what's in storage
-    const checkoutData = JSON.parse(sessionStorage.getItem('checkoutProduct'));
+    // Check for checkout data
+    const checkoutData = JSON.parse(sessionStorage.getItem('checkoutData'));
     const localStorageData = JSON.parse(localStorage.getItem('lastCheckout'));
     
     console.log('Session Storage data:', checkoutData);
@@ -43,26 +42,29 @@ document.addEventListener('DOMContentLoaded', function() {
     // Try sessionStorage first, then localStorage
     let dataToUse = null;
     
-    if (checkoutData && checkoutData.product) {
+    if (checkoutData && (checkoutData.product || checkoutData.products)) {
         dataToUse = checkoutData;
         console.log('✅ Using sessionStorage data');
-    } else if (localStorageData && localStorageData.product) {
+    } else if (localStorageData && (localStorageData.product || localStorageData.products)) {
         dataToUse = localStorageData;
         console.log('✅ Using localStorage data');
     }
     
     if (dataToUse) {
-        console.log('✅ Product data found:', dataToUse.product);
-        console.log('✅ Product price:', dataToUse.product.price, 'Type:', typeof dataToUse.product.price);
-        console.log('✅ Product name:', dataToUse.product.name);
-        console.log('✅ Product quantity:', dataToUse.product.quantity);
+        console.log('✅ Checkout data found:', dataToUse);
         
-        // Display order summary
-        displayOrderSummary(dataToUse.product);
+        if (dataToUse.type === 'cart') {
+            // This is from cart (multiple products)
+            displayCartOrderSummary(dataToUse);
+        } else {
+            // This is from single product (buy now)
+            displaySingleOrderSummary(dataToUse);
+        }
+        
         updateUserInfo(dataToUse.user);
     } else {
         console.error('❌ No checkout data found!');
-        showError('No product selected. Please go back and select a product.');
+        showError('No products selected. Please go back and select products to checkout.');
     }
     
     // Initialize payment method
@@ -75,10 +77,8 @@ document.addEventListener('DOMContentLoaded', function() {
     setupCardFormatting();
 });
 
-function displayOrderSummary(product) {
-    console.log('=== DISPLAYING ORDER SUMMARY ===');
-    console.log('Product object received:', product);
-    
+// Display order summary for single product
+function displaySingleOrderSummary(data) {
     const orderItems = document.getElementById('orderItems');
     const subtotalElement = document.getElementById('subtotal');
     const shippingElement = document.getElementById('shipping');
@@ -90,43 +90,27 @@ function displayOrderSummary(product) {
         return;
     }
     
-    // Extract and validate price
+    const product = data.product;
     let price = product.price;
-    console.log('1. Raw price from product:', price, 'Type:', typeof price);
     
     // Convert to number if it's a string
     if (typeof price === 'string') {
-        console.log('2. Price is a string, converting to number...');
-        // Remove all non-numeric characters except decimal point
         price = price.toString().replace(/[^0-9.-]+/g, '');
         price = parseFloat(price);
-        console.log('3. Converted price:', price);
     }
     
-    // If still not a valid number, show error instead of using default
     if (isNaN(price) || price <= 0) {
         console.error('❌ Invalid price after conversion:', price);
         showError('Error: Product price is invalid. Please go back and select the product again.');
-        return; // Don't continue with invalid price
+        return;
     }
     
-    // Ensure quantity is a number
     const quantity = parseInt(product.quantity) || 1;
-    
-    // Calculate totals
     const subtotal = price * quantity;
-    const shipping = 150.00; // Fixed shipping fee
-    const serviceFee = 0.00; // No service fee for now (COD adds ₱50 later)
+    const shipping = 150.00;
+    const serviceFee = 0.00;
     const total = subtotal + shipping + serviceFee;
     
-    console.log('4. Final calculations:');
-    console.log('   - Unit Price:', price);
-    console.log('   - Quantity:', quantity);
-    console.log('   - Subtotal:', subtotal);
-    console.log('   - Shipping:', shipping);
-    console.log('   - Total:', total);
-    
-    // Display the product details in orderItems
     orderItems.innerHTML = `
         <div class="order-item">
             <div class="product-image">
@@ -146,36 +130,95 @@ function displayOrderSummary(product) {
         </div>
     `;
     
-    // Update totals
     subtotalElement.textContent = formatCurrency(subtotal);
     shippingElement.textContent = formatCurrency(shipping);
     serviceFeeElement.textContent = formatCurrency(serviceFee);
     totalElement.textContent = formatCurrency(total);
     
-    console.log('✅ Order summary displayed successfully!');
-    console.log('   Subtotal:', formatCurrency(subtotal));
-    console.log('   Total:', formatCurrency(total));
+    console.log('✅ Single product order summary displayed');
+}
+
+// Display order summary for cart (multiple products)
+function displayCartOrderSummary(data) {
+    const orderItems = document.getElementById('orderItems');
+    const subtotalElement = document.getElementById('subtotal');
+    const shippingElement = document.getElementById('shipping');
+    const serviceFeeElement = document.getElementById('serviceFee');
+    const totalElement = document.getElementById('total');
     
-    // Add debug info (remove in production)
-    const debugInfo = document.createElement('div');
-    debugInfo.style.cssText = 'margin-top: 20px; padding: 10px; background: #f5f5f5; border-radius: 5px; font-size: 12px; color: #666;';
-    debugInfo.innerHTML = `
-        <strong>Debug Info:</strong><br>
-        Product: ${product.name}<br>
-        Price: ${price} (${typeof price})<br>
-        Quantity: ${quantity}<br>
-        Calculated Subtotal: ${subtotal}
+    if (!orderItems || !subtotalElement || !shippingElement || !serviceFeeElement || !totalElement) {
+        console.error('❌ Order summary elements not found!');
+        return;
+    }
+    
+    const products = data.products || [];
+    let subtotal = 0;
+    
+    if (products.length === 0) {
+        showError('No products in cart. Please go back and add products.');
+        return;
+    }
+    
+    // Generate HTML for all products
+    const productsHTML = products.map(product => {
+        let price = product.price;
+        if (typeof price === 'string') {
+            price = parseFloat(price.replace(/[^0-9.-]+/g, ''));
+        }
+        
+        if (isNaN(price)) price = 0;
+        const quantity = parseInt(product.quantity) || 1;
+        const productTotal = price * quantity;
+        subtotal += productTotal;
+        
+        return `
+            <div class="order-item" style="display: flex; padding: 15px; border-bottom: 1px solid #eee; align-items: center;">
+                <div class="product-image">
+                    <img src="${product.image || 'https://via.placeholder.com/60x60?text=No+Image'}" 
+                         alt="${product.name}"
+                         style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px;">
+                </div>
+                <div class="product-details" style="flex: 1; margin-left: 15px;">
+                    <div style="font-weight: bold; color: #d50000; font-size: 12px;">${product.brand || ''}</div>
+                    <div style="font-weight: bold; margin: 2px 0; font-size: 14px;">${product.name || 'Product'}</div>
+                    <div style="color: #666; font-size: 12px;">
+                        <div>Size: ${product.size || 'N/A'} | Color: ${product.color || 'N/A'}</div>
+                        <div>Quantity: ${quantity} × ${formatCurrency(price)}</div>
+                    </div>
+                </div>
+                <div style="font-weight: bold; font-size: 14px; color: #333;">
+                    ${formatCurrency(productTotal)}
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    const shipping = 150.00;
+    const serviceFee = 0.00;
+    const total = subtotal + shipping + serviceFee;
+    
+    orderItems.innerHTML = `
+        <div style="margin-bottom: 10px; font-weight: bold; color: #d50000;">
+            Ordering ${products.length} ${products.length === 1 ? 'item' : 'items'}
+        </div>
+        <div style="max-height: 300px; overflow-y: auto;">
+            ${productsHTML}
+        </div>
     `;
-    orderItems.appendChild(debugInfo);
+    
+    subtotalElement.textContent = formatCurrency(subtotal);
+    shippingElement.textContent = formatCurrency(shipping);
+    serviceFeeElement.textContent = formatCurrency(serviceFee);
+    totalElement.textContent = formatCurrency(total);
+    
+    console.log('✅ Cart order summary displayed:', products.length, 'items');
 }
 
 function updateUserInfo(user) {
     if (user && user.email) {
-        // Pre-fill email if available
         const emailInput = document.getElementById('email');
         if (emailInput) emailInput.value = user.email;
         
-        // Try to get user details from Firebase
         if (auth.currentUser) {
             db.collection('users').doc(auth.currentUser.uid).get()
                 .then(doc => {
@@ -189,14 +232,12 @@ function updateUserInfo(user) {
                         if (firstNameInput) firstNameInput.value = userData.firstName || '';
                         if (lastNameInput) lastNameInput.value = userData.lastName || '';
                         
-                        // Format phone number if available
                         if (userData.phone && phoneInput) {
                             const phoneNum = userData.phone.replace('+63', '').trim();
                             phoneInput.value = formatPhoneNumber(phoneNum);
                             if (gcashPhoneInput) gcashPhoneInput.value = formatPhoneNumber(phoneNum);
                         }
                         
-                        // Pre-fill address if available
                         if (userData.address) {
                             const streetAddressInput = document.getElementById('streetAddress');
                             const cityInput = document.getElementById('city');
@@ -217,11 +258,8 @@ function updateUserInfo(user) {
 
 function formatPhoneNumber(value) {
     if (!value) return '';
-    
-    // Remove all non-digits
     const cleaned = value.toString().replace(/\D/g, '');
     
-    // Format as XXX XXX XXXX
     if (cleaned.length <= 3) {
         return cleaned;
     } else if (cleaned.length <= 6) {
@@ -234,7 +272,6 @@ function formatPhoneNumber(value) {
 }
 
 function setupPhoneFormatting() {
-    // Format phone number as user types
     const phoneInputs = ['phone', 'gcashPhone'];
     
     phoneInputs.forEach(id => {
@@ -242,17 +279,10 @@ function setupPhoneFormatting() {
         if (input) {
             input.addEventListener('input', function(e) {
                 let value = e.target.value.replace(/\D/g, '');
-                
-                // Limit to 10 digits (without country code)
-                if (value.length > 10) {
-                    value = value.slice(0, 10);
-                }
-                
-                // Format the number
+                if (value.length > 10) value = value.slice(0, 10);
                 e.target.value = formatPhoneNumber(value);
             });
             
-            // Auto-fill GCash phone when regular phone is entered
             if (id === 'phone') {
                 input.addEventListener('blur', function() {
                     const gcashInput = document.getElementById('gcashPhone');
@@ -266,40 +296,26 @@ function setupPhoneFormatting() {
 }
 
 function setupCardFormatting() {
-    // Format card number
     const cardNumber = document.getElementById('cardNumber');
     if (cardNumber) {
         cardNumber.addEventListener('input', function(e) {
             let value = e.target.value.replace(/\D/g, '');
-            
-            // Add spaces every 4 digits
             value = value.replace(/(\d{4})(?=\d)/g, '$1 ');
-            
-            // Limit to 16 digits + 3 spaces = 19 characters
-            if (value.length > 19) {
-                value = value.slice(0, 19);
-            }
-            
+            if (value.length > 19) value = value.slice(0, 19);
             e.target.value = value;
         });
     }
     
-    // Format expiry date
     const expiryDate = document.getElementById('expiryDate');
     if (expiryDate) {
         expiryDate.addEventListener('input', function(e) {
             let value = e.target.value.replace(/\D/g, '');
-            
-            // Add slash after 2 digits
             if (value.length >= 2) {
                 value = value.slice(0, 2) + '/' + value.slice(2);
             }
-            
-            // Limit to MM/YY (5 characters)
             if (value.length > 5) {
                 value = value.slice(0, 5);
             }
-            
             e.target.value = value;
         });
     }
@@ -308,14 +324,12 @@ function setupCardFormatting() {
 function selectPayment(method) {
     console.log('Selecting payment method:', method);
     
-    // Remove selected class from all payment options
     document.querySelectorAll('.payment-option').forEach(option => {
         option.classList.remove('selected');
         const radio = option.querySelector('input[type="radio"]');
         if (radio) radio.checked = false;
     });
     
-    // Add selected class to clicked option
     const selectedOption = document.querySelector(`.payment-option input[value="${method}"]`);
     if (selectedOption) {
         const parent = selectedOption.closest('.payment-option');
@@ -325,12 +339,10 @@ function selectPayment(method) {
         }
     }
     
-    // Hide all payment details
     document.querySelectorAll('.payment-details').forEach(detail => {
         detail.classList.remove('active');
     });
     
-    // Show selected payment details
     if (method === 'card') {
         const cardDetails = document.getElementById('cardDetails');
         if (cardDetails) cardDetails.classList.add('active');
@@ -347,8 +359,6 @@ function selectPayment(method) {
 }
 
 function updateCODServiceFee(isCOD) {
-    console.log('Updating COD service fee:', isCOD);
-    
     const serviceFeeElement = document.getElementById('serviceFee');
     const totalElement = document.getElementById('total');
     const subtotalElement = document.getElementById('subtotal');
@@ -359,22 +369,18 @@ function updateCODServiceFee(isCOD) {
         return;
     }
     
-    // Parse current values
     const subtotal = parseFloat(subtotalElement.textContent.replace(/[^0-9.-]+/g, '')) || 0;
     const shipping = parseFloat(shippingElement.textContent.replace(/[^0-9.-]+/g, '')) || 150.00;
     
     if (isCOD) {
-        // Add ₱50 COD fee
         const codFee = 50.00;
         serviceFeeElement.textContent = formatCurrency(codFee);
         const total = subtotal + shipping + codFee;
         totalElement.textContent = formatCurrency(total);
-        console.log('COD total:', total);
     } else {
         serviceFeeElement.textContent = formatCurrency(0.00);
         const total = subtotal + shipping;
         totalElement.textContent = formatCurrency(total);
-        console.log('Non-COD total:', total);
     }
 }
 
@@ -405,7 +411,6 @@ async function processCheckout() {
         return;
     }
     
-    // Validate phone number (10 digits without country code)
     if (phone.length !== 10 || !/^\d+$/.test(phone)) {
         alert('Please enter a valid 10-digit Philippine phone number (without 0 or +63)');
         return;
@@ -417,10 +422,10 @@ async function processCheckout() {
     }
     
     // Get checkout data
-    const checkoutData = JSON.parse(sessionStorage.getItem('checkoutProduct')) || 
+    const checkoutData = JSON.parse(sessionStorage.getItem('checkoutData')) || 
                         JSON.parse(localStorage.getItem('lastCheckout'));
     
-    if (!checkoutData || !checkoutData.product) {
+    if (!checkoutData) {
         alert('Product information not found. Please try again.');
         return;
     }
@@ -437,36 +442,23 @@ async function processCheckout() {
     
     console.log('Checkout totals:', { subtotal, shipping, serviceFee, total });
     
-    // Get GCash phone number if selected
-    let gcashPhoneNumber = null;
-    if (paymentMethod.value === 'gcash') {
-        const gcashPhone = document.getElementById('gcashPhone')?.value.replace(/\s/g, '').trim();
-        if (gcashPhone) {
-            gcashPhoneNumber = '+63' + gcashPhone;
-        }
+    // Get products from checkout data
+    let products = [];
+    if (checkoutData.type === 'cart') {
+        products = checkoutData.products || [];
+    } else {
+        products = [checkoutData.product];
     }
-
-    sessionStorage.setItem('lastOrderData', JSON.stringify(order));
-sessionStorage.setItem('lastOrderId', order.orderId);
-localStorage.setItem(`order_${order.orderId}`, JSON.stringify(order));
-
-// Also save the product separately for immediate display
-const productData = {
-    product: checkoutData.product,
-    customer: order.customer,
-    totals: order.totals,
-    orderId: order.orderId
-};
-sessionStorage.setItem('checkoutProduct', JSON.stringify(productData));
-
-     // Get selected size
-    const selectedSize = checkoutData.product.size || 'Not selected';
-
-
+    
+    if (products.length === 0) {
+        alert('No products found in order. Please try again.');
+        return;
+    }
     
     // Create order object
+    const orderId = 'ORD-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
     const order = {
-        orderId: 'ORD-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+        orderId: orderId,
         userId: user.uid,
         userEmail: user.email,
         customer: {
@@ -480,10 +472,9 @@ sessionStorage.setItem('checkoutProduct', JSON.stringify(productData));
                 zipCode
             }
         },
-        products: [checkoutData.product],
+        products: products,
         payment: {
             method: paymentMethod.value,
-            gcashPhone: gcashPhoneNumber,
             status: paymentMethod.value === 'cod' ? 'pending' : 'pending_payment'
         },
         totals: {
@@ -498,25 +489,39 @@ sessionStorage.setItem('checkoutProduct', JSON.stringify(productData));
         updatedAt: new Date().toISOString()
     };
     
+    // Add GCash phone if selected
+    if (paymentMethod.value === 'gcash') {
+        const gcashPhone = document.getElementById('gcashPhone')?.value.replace(/\s/g, '').trim();
+        if (gcashPhone) {
+            order.payment.gcashPhone = '+63' + gcashPhone;
+        }
+    }
+    
     try {
         // Save order to Firestore
         const orderRef = await db.collection('orders').add(order);
         console.log('Order saved with ID:', orderRef.id);
-
-           await db.collection('users').doc(user.uid).collection('orders').doc(order.orderId).set(order);
+        
+        // Also save to user's orders subcollection
+        await db.collection('users').doc(user.uid).collection('orders').doc(orderId).set(order);
+        
+        // Clear cart for purchased items if from cart
+        if (checkoutData.type === 'cart') {
+            await clearPurchasedItems(user.uid, products);
+        }
         
         // Clear checkout data
-        sessionStorage.removeItem('checkoutProduct');
+        sessionStorage.removeItem('checkoutData');
         localStorage.removeItem('lastCheckout');
         
         // Show success message
-        let message = `Order placed successfully!\n\nOrder ID: ${order.orderId}\nTotal: ${formatCurrency(total)}\n\n`;
+        let message = `Order placed successfully!\n\nOrder ID: ${orderId}\nTotal: ${formatCurrency(total)}\n\n`;
         
         if (paymentMethod.value === 'gcash') {
             message += `GCash Payment Instructions:\n`;
             message += `1. Send payment to: FOOT LOCKER MERCHANT\n`;
             message += `2. Amount: ${formatCurrency(total)}\n`;
-            message += `3. Reference: ${order.orderId}\n`;
+            message += `3. Reference: ${orderId}\n`;
             message += `4. Save your transaction receipt\n\n`;
             message += `Your order will be processed after payment confirmation.`;
         } else if (paymentMethod.value === 'cod') {
@@ -529,11 +534,47 @@ sessionStorage.setItem('checkoutProduct', JSON.stringify(productData));
         alert(message);
         
         // Redirect to order confirmation page
-        window.location.href = `order-confirmation.html?orderId=${order.orderId}`;
+        window.location.href = `order-confirmation.html?orderId=${orderId}`;
         
     } catch (error) {
         console.error('Error saving order:', error);
         alert('Error processing your order. Please try again.');
+    }
+}
+
+async function clearPurchasedItems(userId, purchasedProducts) {
+    try {
+        const db = firebase.firestore();
+        const cartSnapshot = await db.collection('cart')
+            .where('userId', '==', userId)
+            .get();
+        
+        const batch = db.batch();
+        
+        cartSnapshot.docs.forEach(doc => {
+            const cartItem = doc.data();
+            // Check if this cart item is in the purchased products
+            const isPurchased = purchasedProducts.some(product => 
+                product.id === cartItem.productId
+            );
+            
+            if (isPurchased) {
+                batch.delete(doc.ref);
+            }
+        });
+        
+        await batch.commit();
+        console.log('Cleared purchased items from cart');
+        
+        // Also clear from localStorage
+        let localCart = JSON.parse(localStorage.getItem('footLocker_cart')) || [];
+        localCart = localCart.filter(localItem => {
+            return !purchasedProducts.some(product => product.id === localItem.productId);
+        });
+        localStorage.setItem('footLocker_cart', JSON.stringify(localCart));
+        
+    } catch (error) {
+        console.error('Error clearing purchased items:', error);
     }
 }
 
@@ -545,9 +586,14 @@ function showError(message) {
                 <i class="fas fa-exclamation-circle fa-3x" style="color: #e53935; margin-bottom: 20px;"></i>
                 <h3 style="color: #e53935; margin-bottom: 10px;">Checkout Error</h3>
                 <p style="color: #666; margin-bottom: 20px;">${message}</p>
-                <a href="index.html" style="display: inline-block; padding: 10px 20px; background: #d50000; color: white; text-decoration: none; border-radius: 4px;">
-                    <i class="fas fa-arrow-left"></i> Back to Products
-                </a>
+                <div style="display: flex; gap: 10px; justify-content: center;">
+                    <a href="index.html" style="display: inline-block; padding: 10px 20px; background: #d50000; color: white; text-decoration: none; border-radius: 4px;">
+                        <i class="fas fa-arrow-left"></i> Back to Products
+                    </a>
+                    <a href="cart.html" style="display: inline-block; padding: 10px 20px; background: #333; color: white; text-decoration: none; border-radius: 4px;">
+                        <i class="fas fa-shopping-cart"></i> View Cart
+                    </a>
+                </div>
             </div>
         `;
     } else {
@@ -558,14 +604,18 @@ function showError(message) {
 // Debug function
 window.debugCheckoutData = function() {
     console.log('=== CHECKOUT DEBUG ===');
-    console.log('Session Storage:', JSON.parse(sessionStorage.getItem('checkoutProduct')));
+    console.log('Session Storage:', JSON.parse(sessionStorage.getItem('checkoutData')));
     console.log('Local Storage:', JSON.parse(localStorage.getItem('lastCheckout')));
     
-    const data = JSON.parse(sessionStorage.getItem('checkoutProduct')) || 
+    const data = JSON.parse(sessionStorage.getItem('checkoutData')) || 
                  JSON.parse(localStorage.getItem('lastCheckout'));
     
-    if (data && data.product) {
-        alert(`Checkout Data:\nProduct: ${data.product.name}\nPrice: ${data.product.price}\nQuantity: ${data.product.quantity}`);
+    if (data) {
+        if (data.type === 'cart') {
+            alert(`Cart Checkout:\n${data.products?.length || 0} items\nTotal: ₱${data.totals?.total || 0}`);
+        } else {
+            alert(`Single Product:\n${data.product?.name}\nPrice: ${data.product?.price}`);
+        }
     } else {
         alert('No checkout data found!');
     }

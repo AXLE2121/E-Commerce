@@ -18,8 +18,23 @@ document.addEventListener('DOMContentLoaded', function() {
         // Wait for Firebase to initialize
         setTimeout(() => {
             initializeProducts();
+            
+            // Initialize counters
+            updateCartCount();
+            updateFavoritesCount();
         }, 1500);
     }
+    
+    // Listen for auth state changes to update counters
+    firebase.auth().onAuthStateChanged((user) => {
+        console.log('Auth state changed:', user ? user.email : 'No user');
+        
+        // Update cart count
+        updateCartCount();
+        
+        // Update favorites count
+        updateFavoritesCount();
+    });
 });
 
 // Initialize products from Firestore
@@ -392,7 +407,7 @@ function clearFilters() {
 }
 
 // Add to cart function
-function addToCart(productId) {
+async function addToCart(productId) {
     const user = firebase.auth().currentUser;
     
     if (!user) {
@@ -401,41 +416,150 @@ function addToCart(productId) {
         return;
     }
     
-    // Use Firebase Data Service if available
-    if (typeof firebaseDataService !== 'undefined' && firebaseDataService.addToCart) {
-        firebaseDataService.addToCart(user.uid, productId)
-            .then(() => {
-                showMessage('Added to cart successfully!', 'success');
-                updateCartCount();
-            })
-            .catch(error => {
-                console.error('Error adding to cart:', error);
-                showMessage('Error adding to cart', 'error');
-            });
-    } else {
-        showMessage('Added to cart!', 'success');
+    try {
+        // Get product details from Firestore
+        const db = firebase.firestore();
+        const productDoc = await db.collection('products').doc(productId).get();
+        
+        if (!productDoc.exists) {
+            showMessage('Product not found', 'error');
+            return;
+        }
+        
+        const productData = productDoc.data();
+        
+        // Create cart item
+        const cartItem = {
+            id: productId,
+            productId: productId,
+            name: productData.name || 'Unknown Product',
+            brand: productData.brand || 'Brand',
+            price: productData.price || 0,
+            image: productData.image || '',
+            quantity: 1,
+            size: null // Default size, can be selected in product page
+        };
+        
+        // Get existing cart
+        let cart = JSON.parse(localStorage.getItem('footLocker_cart') || '[]');
+        
+        // Check if product already exists in cart
+        const existingIndex = cart.findIndex(item => 
+            (item.id === productId || item.productId === productId) && 
+            item.size === cartItem.size
+        );
+        
+        if (existingIndex > -1) {
+            // Update quantity if item exists
+            cart[existingIndex].quantity = (cart[existingIndex].quantity || 1) + 1;
+        } else {
+            // Add new item to cart
+            cart.push(cartItem);
+        }
+        
+        // Save to localStorage
+        localStorage.setItem('footLocker_cart', JSON.stringify(cart));
+        
+        // Also sync to Firestore if data service is available
+        if (typeof firebaseDataService !== 'undefined' && firebaseDataService.addToCart) {
+            await firebaseDataService.addToCart(user.uid, productId);
+        }
+        
+        showMessage('Added to cart successfully!', 'success');
+        updateCartCount();
+        
+    } catch (error) {
+        console.error('Error adding to cart:', error);
+        showMessage('Error adding to cart', 'error');
     }
 }
 
 // Update cart count
 async function updateCartCount() {
+    const cartBadge = document.querySelector('.cart-btn .icon-badge');
+    if (!cartBadge) return;
+    
     const user = firebase.auth().currentUser;
-    if (!user) return;
     
     try {
-        if (typeof firebaseDataService !== 'undefined' && firebaseDataService.getUserCart) {
+        if (user && typeof firebaseDataService !== 'undefined' && firebaseDataService.getUserCart) {
+            // Use Firestore for logged-in users
             const cartItems = await firebaseDataService.getUserCart(user.uid);
             const totalItems = cartItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
             
-            // Update cart badges
-            document.querySelectorAll('.cart-btn .icon-badge').forEach(badge => {
-                badge.textContent = totalItems;
-            });
+            cartBadge.textContent = totalItems > 99 ? '99+' : totalItems;
+            if (totalItems > 0) {
+                cartBadge.style.display = 'flex';
+            } else {
+                cartBadge.style.display = 'none';
+            }
+        } else {
+            // Use localStorage for non-logged-in users or fallback
+            const cart = JSON.parse(localStorage.getItem('footLocker_cart') || '[]');
+            const totalItems = cart.reduce((sum, item) => sum + (item.quantity || 1), 0);
+            
+            cartBadge.textContent = totalItems > 99 ? '99+' : totalItems;
+            if (totalItems > 0) {
+                cartBadge.style.display = 'flex';
+            } else {
+                cartBadge.style.display = 'none';
+            }
         }
     } catch (error) {
         console.error('Error updating cart count:', error);
+        cartBadge.style.display = 'none';
     }
 }
+
+// Update favorites count
+async function updateFavoritesCount() {
+    const favoritesBadge = document.querySelector('.favorites-btn .icon-badge');
+    if (!favoritesBadge) {
+        console.log('Favorites badge not found');
+        return;
+    }
+    
+    const user = firebase.auth().currentUser;
+    
+    if (!user) {
+        // User not logged in, hide count
+        favoritesBadge.textContent = '0';
+        favoritesBadge.style.display = 'none';
+        console.log('User not logged in, hiding favorites badge');
+        return;
+    }
+    
+    try {
+        const db = firebase.firestore();
+        const snapshot = await db.collection('favorites')
+            .where('userId', '==', user.uid)
+            .get();
+        
+        const count = snapshot.size;
+        favoritesBadge.textContent = count > 99 ? '99+' : count;
+        
+        if (count > 0) {
+            favoritesBadge.style.display = 'flex';
+            favoritesBadge.style.visibility = 'visible';
+        } else {
+            favoritesBadge.style.display = 'none';
+        }
+        
+        console.log('Favorites count updated:', count, 'Display:', favoritesBadge.style.display);
+    } catch (error) {
+        console.error('Error updating favorites count:', error);
+        favoritesBadge.style.display = 'none';
+    }
+}
+
+// Refresh all counters
+function refreshAllCounters() {
+    updateCartCount();
+    updateFavoritesCount();
+}
+
+// Set up periodic counter refresh
+setInterval(refreshAllCounters, 30000); // Refresh every 30 seconds
 
 // Show message function
 function showMessage(message, type = 'success') {
@@ -564,8 +688,11 @@ window.clearFilters = clearFilters;
 window.addToCart = addToCart;
 window.initializeProducts = initializeProducts;
 window.navigateToViewProduct = navigateToViewProduct;
+window.updateCartCount = updateCartCount;
+window.updateFavoritesCount = updateFavoritesCount;
+window.refreshAllCounters = refreshAllCounters;
 
 // Export for testing
 window.products = products;
 
-console.log('data.js loaded - Products are now clickable!');
+console.log('data.js loaded - Products are now clickable with counters!');

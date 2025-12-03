@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Favorites - Foot Locker</title>
+    <title>My Orders - Foot Locker</title>
     <link rel="stylesheet" href="styles/style.css">
-    <link rel="stylesheet" href="styles/favorites.css">
+    <link rel="stylesheet" href="styles/my-orders.css">
     <link rel="stylesheet" href="styles/logo.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -18,9 +18,9 @@
     <!-- Header -->
     <header class="header">
         <div class="header-top">
-           <div class="logo-container">
+            <div class="logo-container">
                 <a href="index.html">
-                <img src="images/shoelogo.png" alt="Foot Locker Logo" class="logo-img">
+                    <img src="images/logo.png" alt="Foot Locker Logo" class="logo-img">
                 </a>
                 <h1 class="logo">Foot Locker</h1>
             </div>
@@ -52,15 +52,23 @@
                     </div>
                     
                     <div class="action-icons">
-                        <a href="favorites.html" class="icon-btn favorites-btn active">
+                       
+                        <a href="favorites.html" class="icon-btn favorites-btn">
                             <i class="fas fa-heart"></i>
-                            <span class="icon-badge" id="favoritesCount">0</span>
+                            <span class="icon-badge" id="headerFavoritesCount">0</span>
                         </a>
                         
                         <a href="cart.html" class="icon-btn cart-btn">
                             <i class="fas fa-shopping-cart"></i>
-                            <span class="icon-badge">0</span>
+                            <span class="icon-badge" id="headerCartCount">0</span>
                         </a>
+
+                         <a href="my-orders.html" class="icon-btn orders-btn active">
+                            <i class="fas fa-shopping-bag"></i>
+                            <span class="icon-badge" id="headerOrdersCount">0</span>
+                        </a>
+                        
+
                     </div>
                 </div>
             </div>
@@ -68,60 +76,54 @@
     </header>
 
     <!-- Main Content -->
-    <div class="favorites-main-container">
-        <!-- Favorites Content -->
-        <div class="favorites-container">
-            <!-- Favorites Sidebar -->
-            <aside class="favorites-sidebar">
-                <div class="filters-summary">
-                    <h3>My Wishlist</h3>
-                    <div class="wishlist-stats">
-                        <div class="stat-item">
-                            <span class="stat-number" id="totalFavorites">0</span>
-                            <span class="stat-label">Items</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-number">₱0</span>
-                            <span class="stat-label">Total Value</span>
-                        </div>
+    <div class="orders-main-container">
+        <div class="container">
+            <!-- Page Title -->
+            <div class="page-header">
+                <h1><i class="fas fa-shopping-bag"></i> My Orders</h1>
+                <p>View and track your order history</p>
+            </div>
+            
+            <!-- Orders Container -->
+            <div class="orders-container">
+                <!-- Orders will be loaded here dynamically -->
+                <div id="ordersList" class="orders-list">
+                    <!-- Loading spinner -->
+                    <div class="loading-spinner" id="loadingSpinner">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <p>Loading your orders...</p>
                     </div>
                 </div>
-            </aside>
-
-            <!-- Favorites Products -->
-            <main class="favorites-content">
-                <div class="favorites-header">
-                    <div class="favorites-info">
-                        <h2>Favorite Items</h2>
-                        <p>Items you've saved for later</p>
-                    </div>
-                    <div class="favorites-actions">
-                        <button class="action-btn clear-all" id="clearAllBtn">
-                            <i class="fas fa-trash"></i>
-                            Clear All
-                        </button>
-                        <button class="action-btn move-to-cart" id="moveToCartBtn">
-                            <i class="fas fa-shopping-cart"></i>
-                            Add All to Cart
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Favorites Grid -->
-                <div class="favorites-grid" id="favoritesGrid">
-                    <!-- Favorite items will be dynamically inserted here -->
-                </div>
-
-                <!-- Empty State -->
-                <div class="empty-favorites" id="emptyFavorites">
+                
+                <!-- No orders message -->
+                <div class="no-orders" id="noOrders" style="display: none;">
                     <div class="empty-icon">
-                        <i class="fas fa-heart"></i>
+                        <i class="fas fa-shopping-bag"></i>
                     </div>
-                    <h3>No Favorite Items Yet</h3>
-                    <p>Start adding items to your favorites by clicking the heart icon on any product.</p>
-                    <a href="index.html" class="browse-btn">Browse Products</a>
+                    <h3>No Orders Yet</h3>
+                    <p>You haven't placed any orders yet. Start shopping to see your orders here!</p>
+                    <a href="index.html" class="shop-btn">
+                        <i class="fas fa-shopping-cart"></i> Start Shopping
+                    </a>
                 </div>
-            </main>
+                
+                <!-- Login required message -->
+                <div class="login-required" id="loginRequired" style="display: none;">
+                    <div class="lock-icon">
+                        <i class="fas fa-lock"></i>
+                    </div>
+                    <h3>Login Required</h3>
+                    <p>Please login to view your order history.</p>
+                    <div class="login-actions">
+                        <a href="login.html?redirect=my-orders.html" class="login-btn">
+                            <i class="fas fa-sign-in-alt"></i> Login
+                        </a>
+                        <a href="register.html" class="register-btn">
+                            <i class="fas fa-user-plus"></i> Register
+                        </a>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -138,12 +140,11 @@
         };
 
         // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
     </script>
-    <script src="js/data.js"></script>
-    <script src="js/favorites.js"></script>
+    <script src="js/my-orders.js"></script>
     <script src="js/auth-check.js"></script>
-    <script src="js/firebase-data.js"></script>
-    <script src="js/data.js"></script>
 </body>
 </html>

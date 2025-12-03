@@ -18,6 +18,7 @@ const db = firebase.firestore();
 
 // Store current product globally
 let currentProduct = null;
+let isProductInFavorites = false;
 
 // Main function to load product
 document.addEventListener('DOMContentLoaded', function() {
@@ -82,12 +83,35 @@ async function loadProductData(productId) {
         console.log('Product loaded:', currentProduct);
         console.log('Product price:', currentProduct.price, 'Type:', typeof currentProduct.price);
         
+        // Check if product is in favorites for logged-in user
+        const user = auth.currentUser;
+        if (user) {
+            isProductInFavorites = await checkIfInFavorites(user.uid, productId);
+            console.log('Is product in favorites?', isProductInFavorites);
+        }
+        
         // Display product
         displayProduct(currentProduct);
         
     } catch (error) {
         console.error('Error loading product:', error);
         showError('Error loading product: ' + error.message);
+    }
+}
+
+// Check if product is in user's favorites
+async function checkIfInFavorites(userId, productId) {
+    try {
+        const favoritesRef = db.collection('favorites')
+            .where('userId', '==', userId)
+            .where('productId', '==', productId)
+            .limit(1);
+        
+        const snapshot = await favoritesRef.get();
+        return !snapshot.empty;
+    } catch (error) {
+        console.error('Error checking favorites:', error);
+        return false;
     }
 }
 
@@ -121,6 +145,17 @@ function displayProduct(product) {
     const actualPrice = product.price || 0;
     const displayPrice = formatPrice(actualPrice);
     
+    // Favorites button HTML - with dynamic icon based on favorites status
+    const favoritesIcon = isProductInFavorites ? 'fas' : 'far';
+    const favoritesTooltip = isProductInFavorites ? 'Remove from Favorites' : 'Add to Favorites';
+    const favoritesColor = isProductInFavorites ? '#d50000' : '#666';
+    
+    const favoritesButtonHTML = `
+        <button class="favorite-btn" id="favoriteBtn" title="${favoritesTooltip}">
+            <i class="${favoritesIcon} fa-heart" style="color: ${favoritesColor};"></i>
+        </button>
+    `;
+    
     // Use ACTUAL product data
     container.innerHTML = `
         <!-- Left Column: Product Images -->
@@ -129,6 +164,8 @@ function displayProduct(product) {
                 <img src="${product.image || 'https://via.placeholder.com/500x400?text=No+Image'}" 
                      alt="${product.name}" 
                      id="mainProductImage">
+                <!-- Favorites Button on Image -->
+                ${favoritesButtonHTML}
             </div>
             <div class="image-thumbnails" id="thumbnailsContainer">
                 ${thumbnailsHTML}
@@ -181,15 +218,12 @@ function displayProduct(product) {
                 <button class="buy-now-btn" id="buyNowBtn">
                     <i class="fas fa-bolt"></i> BUY NOW
                 </button>
-                <button class="add-to-cart-btn" onclick="addToCart('${product.id}')">
+                <button class="add-to-cart-btn" id="addToCartBtn">
                     <i class="fas fa-shopping-cart"></i> ADD TO CART
                 </button>
-            </div>
-            
-            <!-- Debug info (remove in production) -->
-            <div style="margin-top: 20px; padding: 10px; background: #f5f5f5; border-radius: 5px; font-size: 12px;">
-                <strong>Product ID:</strong> ${product.id}<br>
-                <strong>Actual Price:</strong> ${actualPrice} (${typeof actualPrice})
+                <button class="favorite-action-btn" id="favoriteActionBtn">
+                    <i class="${favoritesIcon} fa-heart"></i> ${isProductInFavorites ? 'REMOVE FROM FAVORITES' : 'ADD TO FAVORITES'}
+                </button>
             </div>
         </div>
     `;
@@ -249,6 +283,30 @@ function initializeProductInteractions(productId) {
             buyNow(productId);
         });
     }
+    
+    // Add to Cart button
+    const addToCartBtn = document.getElementById('addToCartBtn');
+    if (addToCartBtn) {
+        addToCartBtn.addEventListener('click', function() {
+            addToCartFromProductPage();
+        });
+    }
+    
+    // Favorites button on image
+    const favoriteBtn = document.getElementById('favoriteBtn');
+    if (favoriteBtn) {
+        favoriteBtn.addEventListener('click', function() {
+            toggleFavorite(productId, this);
+        });
+    }
+    
+    // Favorites action button
+    const favoriteActionBtn = document.getElementById('favoriteActionBtn');
+    if (favoriteActionBtn) {
+        favoriteActionBtn.addEventListener('click', function() {
+            toggleFavorite(productId, this);
+        });
+    }
 }
 
 function validateQuantity(input) {
@@ -263,6 +321,197 @@ function validateQuantity(input) {
     }
     
     input.value = value;
+}
+
+// Add to Cart from product page
+async function addToCartFromProductPage() {
+    const user = auth.currentUser;
+    if (!user) {
+        alert('Please login to add items to cart');
+        window.location.href = 'login.html?redirect=' + encodeURIComponent(window.location.href);
+        return;
+    }
+    
+    const selectedSizeElement = document.querySelector('.size-option.selected');
+    const selectedSize = selectedSizeElement?.dataset.size;
+    const quantity = parseInt(document.getElementById('quantityInput')?.value) || 1;
+    
+    if (!selectedSize) {
+        alert('Please select a size');
+        return;
+    }
+    
+    if (!currentProduct) {
+        alert('Product information not available. Please refresh the page.');
+        return;
+    }
+    
+    try {
+        // Create cart item
+        const cartItem = {
+            id: currentProduct.id,
+            productId: currentProduct.id,
+            name: currentProduct.name,
+            brand: currentProduct.brand,
+            price: currentProduct.price || 0,
+            image: currentProduct.image || '',
+            quantity: quantity,
+            size: selectedSize
+        };
+        
+        // Get existing cart
+        let cart = JSON.parse(localStorage.getItem('footLocker_cart') || '[]');
+        
+        // Check if product already exists in cart with same size
+        const existingIndex = cart.findIndex(item => 
+            (item.id === currentProduct.id || item.productId === currentProduct.id) && 
+            item.size === selectedSize
+        );
+        
+        if (existingIndex > -1) {
+            // Update quantity if item exists
+            cart[existingIndex].quantity = (cart[existingIndex].quantity || 1) + quantity;
+        } else {
+            // Add new item to cart
+            cart.push(cartItem);
+        }
+        
+        // Save to localStorage
+        localStorage.setItem('footLocker_cart', JSON.stringify(cart));
+        
+        // Also sync to Firestore if data service is available
+        if (typeof firebaseDataService !== 'undefined' && firebaseDataService.addToCart) {
+            await firebaseDataService.addToCart(user.uid, currentProduct.id, quantity, selectedSize);
+        }
+        
+        showSuccessMessage(`Added ${quantity} item${quantity > 1 ? 's' : ''} to cart successfully!`);
+        
+        // Update cart count in header
+        updateCartCount();
+        
+    } catch (error) {
+        console.error('Error adding to cart:', error);
+        alert('Error adding to cart. Please try again.');
+    }
+}
+
+// Toggle favorites function
+async function toggleFavorite(productId, buttonElement = null) {
+    const user = auth.currentUser;
+    if (!user) {
+        alert('Please login to add items to favorites');
+        window.location.href = 'login.html?redirect=' + encodeURIComponent(window.location.href);
+        return;
+    }
+    
+    try {
+        if (isProductInFavorites) {
+            // Remove from favorites
+            await removeFromFavorites(user.uid, productId);
+            isProductInFavorites = false;
+            showMessage('Removed from favorites', 'success');
+        } else {
+            // Add to favorites
+            await addToFavorites(user.uid, productId);
+            isProductInFavorites = true;
+            showMessage('Added to favorites', 'success');
+        }
+        
+        // Update UI
+        updateFavoriteButtons();
+        
+        // Update favorites count in header
+        if (typeof updateFavoritesCount === 'function') {
+            updateFavoritesCount();
+        }
+        
+    } catch (error) {
+        console.error('Error toggling favorite:', error);
+        showMessage('Error updating favorites', 'error');
+    }
+}
+
+// Add to favorites
+async function addToFavorites(userId, productId) {
+    try {
+        await db.collection('favorites').add({
+            userId: userId,
+            productId: productId,
+            addedAt: new Date().toISOString(),
+            productName: currentProduct?.name || 'Unknown Product',
+            productImage: currentProduct?.image || '',
+            productPrice: currentProduct?.price || 0
+        });
+        return true;
+    } catch (error) {
+        throw error;
+    }
+}
+
+// Remove from favorites
+async function removeFromFavorites(userId, productId) {
+    try {
+        const snapshot = await db.collection('favorites')
+            .where('userId', '==', userId)
+            .where('productId', '==', productId)
+            .get();
+        
+        const batch = db.batch();
+        snapshot.docs.forEach(doc => {
+            batch.delete(doc.ref);
+        });
+        
+        await batch.commit();
+        return true;
+    } catch (error) {
+        throw error;
+    }
+}
+
+// Update favorite buttons UI
+function updateFavoriteButtons() {
+    // Update image favorites button
+    const imageFavoriteBtn = document.getElementById('favoriteBtn');
+    if (imageFavoriteBtn) {
+        const icon = imageFavoriteBtn.querySelector('i');
+        if (icon) {
+            icon.className = isProductInFavorites ? 'fas fa-heart' : 'far fa-heart';
+            icon.style.color = isProductInFavorites ? '#d50000' : '#666';
+            imageFavoriteBtn.title = isProductInFavorites ? 'Remove from Favorites' : 'Add to Favorites';
+        }
+    }
+    
+    // Update action favorites button
+    const actionFavoriteBtn = document.getElementById('favoriteActionBtn');
+    if (actionFavoriteBtn) {
+        const icon = actionFavoriteBtn.querySelector('i');
+        if (icon) {
+            icon.className = isProductInFavorites ? 'fas fa-heart' : 'far fa-heart';
+        }
+        actionFavoriteBtn.innerHTML = `<i class="${isProductInFavorites ? 'fas' : 'far'} fa-heart"></i> ${isProductInFavorites ? 'REMOVE FROM FAVORITES' : 'ADD TO FAVORITES'}`;
+    }
+}
+
+// Update favorites count in header
+async function updateFavoritesCount() {
+    const user = auth.currentUser;
+    if (!user) return;
+    
+    try {
+        const snapshot = await db.collection('favorites')
+            .where('userId', '==', user.uid)
+            .get();
+        
+        const count = snapshot.size;
+        const favoritesCountElement = document.getElementById('favoritesCount');
+        
+        if (favoritesCountElement) {
+            favoritesCountElement.textContent = count > 99 ? '99+' : count;
+            favoritesCountElement.style.display = count > 0 ? 'flex' : 'none';
+        }
+    } catch (error) {
+        console.error('Error updating favorites count:', error);
+    }
 }
 
 async function buyNow(productId) {
@@ -349,67 +598,11 @@ async function buyNow(productId) {
     }
 }
 
-async function addToCart(productId) {
-    const user = auth.currentUser;
-    if (!user) {
-        alert('Please login to add items to cart');
-        window.location.href = 'login.html?redirect=' + encodeURIComponent(window.location.href);
-        return;
-    }
-    
-    const selectedSize = document.querySelector('.size-option.selected')?.dataset.size;
-    const quantity = parseInt(document.getElementById('quantityInput')?.value) || 1;
-    
-    if (!selectedSize) {
-        alert('Please select a size');
-        return;
-    }
-    
-    try {
-        await addToCartDirect(productId, quantity, selectedSize);
-        showSuccessMessage('Added to cart successfully!');
-        updateCartCount();
-    } catch (error) {
-        console.error('Error adding to cart:', error);
-        alert('Error adding to cart. Please try again.');
-    }
-}
-
-async function addToCartDirect(productId, quantity, size) {
-    try {
-        const cartItem = {
-            userId: auth.currentUser.uid,
-            productId: productId,
-            productName: currentProduct?.name || 'Unknown Product',
-            productPrice: currentProduct?.price || 0, // ACTUAL price
-            productImage: currentProduct?.image || '',
-            quantity: quantity,
-            size: size,
-            addedAt: new Date().toISOString()
-        };
-        
-        // Save to local storage
-        let cart = JSON.parse(localStorage.getItem('footLocker_cart') || '[]');
-        const existingIndex = cart.findIndex(item => 
-            item.productId === productId && 
-            item.size === size
-        );
-        
-        if (existingIndex > -1) {
-            cart[existingIndex].quantity += quantity;
-        } else {
-            cart.push(cartItem);
-        }
-        
-        localStorage.setItem('footLocker_cart', JSON.stringify(cart));
-        
-        return true;
-    } catch (error) {
-        throw error;
-    }
-}
-
 function showSuccessMessage(message) {
+    showMessage(message, 'success');
+}
+
+function showMessage(message, type = 'success') {
     const messageDiv = document.createElement('div');
     messageDiv.className = 'success-message';
     messageDiv.textContent = message;
@@ -418,7 +611,7 @@ function showSuccessMessage(message) {
         top: 100px;
         right: 20px;
         padding: 15px 25px;
-        background: #4caf50;
+        background: ${type === 'success' ? '#4caf50' : '#f44336'};
         color: white;
         border-radius: 6px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.15);
@@ -473,7 +666,7 @@ function updateCartCount() {
     if (cartCountElement) {
         try {
             const cart = JSON.parse(localStorage.getItem('footLocker_cart') || '[]');
-            const count = cart.reduce((total, item) => total + item.quantity, 0);
+            const count = cart.reduce((total, item) => total + (item.quantity || 1), 0);
             cartCountElement.textContent = count > 99 ? '99+' : count;
             cartCountElement.style.display = count > 0 ? 'flex' : 'none';
         } catch (error) {
@@ -509,6 +702,19 @@ function updateAuthUI() {
             if (userInfo) userInfo.style.display = 'flex';
             if (userEmail) userEmail.textContent = user.email;
             
+            // Check if product is in favorites when user logs in
+            if (currentProduct) {
+                checkIfInFavorites(user.uid, currentProduct.id)
+                    .then(result => {
+                        isProductInFavorites = result;
+                        updateFavoriteButtons();
+                        if (typeof updateFavoritesCount === 'function') {
+                            updateFavoritesCount();
+                        }
+                    })
+                    .catch(error => console.error('Error checking favorites:', error));
+            }
+            
             if (logoutBtn) {
                 logoutBtn.addEventListener('click', (e) => {
                     e.preventDefault();
@@ -519,10 +725,15 @@ function updateAuthUI() {
             }
             
             updateCartCount();
+            if (typeof updateFavoritesCount === 'function') {
+                updateFavoritesCount();
+            }
         } else {
             console.log('User not logged in');
             if (authButtons) authButtons.style.display = 'flex';
             if (userInfo) userInfo.style.display = 'none';
+            isProductInFavorites = false;
+            updateFavoriteButtons();
         }
     });
 }
@@ -543,18 +754,8 @@ function setupEventListeners() {
 
 // Make functions available globally
 window.buyNow = buyNow;
-window.addToCart = addToCart;
+window.addToCart = addToCartFromProductPage;
 window.validateQuantity = validateQuantity;
+window.toggleFavorite = toggleFavorite;
 
-// Debug function
-window.debugProductData = function() {
-    console.log('=== CURRENT PRODUCT DATA ===');
-    console.log('Current product:', currentProduct);
-    console.log('Product ID:', currentProduct?.id);
-    console.log('Product name:', currentProduct?.name);
-    console.log('Product price:', currentProduct?.price, 'Type:', typeof currentProduct?.price);
-    
-    if (currentProduct) {
-        alert(`Product Data:\nID: ${currentProduct.id}\nName: ${currentProduct.name}\nPrice: ${currentProduct.price}\nType: ${typeof currentProduct.price}`);
-    }
-};
+console.log('viewProduct.js loaded - Product page functionality ready');

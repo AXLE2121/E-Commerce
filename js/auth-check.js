@@ -1,4 +1,4 @@
-// auth-check.js - Check if user is logged in
+// auth-check.js - Updated to handle badge counts
 document.addEventListener('DOMContentLoaded', function() {
     // Wait for Firebase to initialize
     setTimeout(() => {
@@ -16,6 +16,8 @@ function checkAuthStatus() {
             // User is signed in
             console.log('User is logged in:', user.email);
             updateHeaderForLoggedInUser(user);
+            updateCartCount(); // Update cart count
+            updateFavoritesCount(); // Update favorites count
             
             // Check if email is verified (optional)
             if (!user.emailVerified && window.location.pathname.includes('favorites') || window.location.pathname.includes('cart')) {
@@ -24,6 +26,12 @@ function checkAuthStatus() {
         } else {
             // User is not signed in
             console.log('User is not logged in');
+            
+            // Clear badge counts for logged out users
+            document.querySelectorAll('.icon-badge').forEach(badge => {
+                badge.textContent = '0';
+                badge.style.display = 'none';
+            });
             
             // Check if we're on favorites or cart page
             const currentPage = window.location.pathname;
@@ -55,6 +63,117 @@ function updateHeaderForLoggedInUser(user) {
         });
     }
 }
+
+// Function to update cart count
+async function updateCartCount() {
+    const user = firebase.auth().currentUser;
+    if (!user) return;
+    
+    try {
+        let cartCount = 0;
+        
+        // Try to get cart from Firestore first
+        const db = firebase.firestore();
+        const cartSnapshot = await db.collection('cart')
+            .where('userId', '==', user.uid)
+            .get();
+        
+        if (!cartSnapshot.empty) {
+            cartSnapshot.forEach(doc => {
+                const cartItem = doc.data();
+                cartCount += cartItem.quantity || 1;
+            });
+        } else {
+            // Fallback to localStorage
+            const localCart = JSON.parse(localStorage.getItem('footLocker_cart')) || [];
+            cartCount = localCart.reduce((sum, item) => sum + (item.quantity || 1), 0);
+        }
+        
+        console.log('Cart count:', cartCount);
+        
+        // Update all cart badges
+        document.querySelectorAll('.cart-btn .icon-badge').forEach(badge => {
+            badge.textContent = cartCount > 99 ? '99+' : cartCount;
+            badge.style.display = cartCount > 0 ? 'flex' : 'none';
+        });
+        
+    } catch (error) {
+        console.error('Error updating cart count:', error);
+        // Fallback to localStorage
+        const localCart = JSON.parse(localStorage.getItem('footLocker_cart')) || [];
+        const cartCount = localCart.reduce((sum, item) => sum + (item.quantity || 1), 0);
+        
+        document.querySelectorAll('.cart-btn .icon-badge').forEach(badge => {
+            badge.textContent = cartCount > 99 ? '99+' : cartCount;
+            badge.style.display = cartCount > 0 ? 'flex' : 'none';
+        });
+    }
+}
+
+// Function to update favorites count
+async function updateFavoritesCount() {
+    const user = firebase.auth().currentUser;
+    if (!user) return;
+    
+    try {
+        const db = firebase.firestore();
+        const favoritesSnapshot = await db.collection('favorites')
+            .where('userId', '==', user.uid)
+            .get();
+        
+        const favoritesCount = favoritesSnapshot.size;
+        
+        // Update all favorites badges
+        document.querySelectorAll('.favorites-btn .icon-badge').forEach(badge => {
+            badge.textContent = favoritesCount > 99 ? '99+' : favoritesCount;
+            badge.style.display = favoritesCount > 0 ? 'flex' : 'none';
+        });
+        
+    } catch (error) {
+        console.error('Error updating favorites count:', error);
+    }
+}
+
+async function updateOrdersCount() {
+    const user = firebase.auth().currentUser;
+    if (!user) return;
+    
+    try {
+        const db = firebase.firestore();
+        const ordersSnapshot = await db.collection('orders')
+            .where('userId', '==', user.uid)
+            .get();
+        
+        const ordersCount = ordersSnapshot.size;
+        
+        console.log('Orders count:', ordersCount);
+        
+        // Update all orders badges
+        document.querySelectorAll('.orders-btn .icon-badge').forEach(badge => {
+            badge.textContent = ordersCount > 99 ? '99+' : ordersCount;
+            badge.style.display = ordersCount > 0 ? 'flex' : 'none';
+        });
+        
+    } catch (error) {
+        console.error('Error updating orders count:', error);
+    }
+}
+
+// Update the auth state changed handler to call updateOrdersCount
+auth.onAuthStateChanged((user) => {
+    if (user) {
+        // User is signed in
+        console.log('User is logged in:', user.email);
+        updateHeaderForLoggedInUser(user);
+        updateCartCount();
+        updateFavoritesCount();
+        updateOrdersCount(); // Add this line
+        
+        // ... rest of your code
+    } else {
+        // ... rest of your code
+    }
+});
 
 // Function to show login required modal
 function showLoginRequiredModal() {
@@ -313,3 +432,5 @@ function addModalStyles() {
 
 // Make functions globally available
 window.closeLoginModal = closeLoginModal;
+window.updateCartCount = updateCartCount;
+window.updateFavoritesCount = updateFavoritesCount;

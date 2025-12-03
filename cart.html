@@ -13,6 +13,84 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
+    
+    <style>
+        .cart-items-section .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .select-all-section {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .cart-item {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            gap: 15px;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            align-items: center;
+        }
+        
+        .item-checkbox {
+            width: 20px;
+            height: 20px;
+        }
+        
+        .item-content {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        .item-image {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 4px;
+        }
+        
+        .item-details {
+            flex: 1;
+        }
+        
+        .item-actions {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 10px;
+        }
+        
+        .selected-items-info {
+            background: #f0f7ff;
+            border: 1px solid #d1e3ff;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .selected-items-info.active {
+            display: block;
+        }
+        
+        .selected-items-count {
+            font-weight: bold;
+            color: #d50000;
+        }
+        
+        .checkout-disabled {
+            background: #cccccc !important;
+            cursor: not-allowed !important;
+        }
+    </style>
 </head>
 <body>
     <!-- Header -->
@@ -20,7 +98,7 @@
         <div class="header-top">
             <div class="logo-container">
                 <a href="index.html">
-                <img src="images/logo.png" alt="Foot Locker Logo" class="logo-img">
+                    <img src="images/logo.png" alt="Foot Locker Logo" class="logo-img">
                 </a>
                 <h1 class="logo">Foot Locker</h1>
             </div>
@@ -59,7 +137,7 @@
                         
                         <a href="cart.html" class="icon-btn cart-btn active">
                             <i class="fas fa-shopping-cart"></i>
-                            <span class="icon-badge" id="headerCartCount">1</span>
+                            <span class="icon-badge" id="headerCartCount">0</span>
                         </a>
                     </div>
                 </div>
@@ -69,12 +147,29 @@
 
     <!-- Main Content -->
     <div class="cart-main-container">
+        <!-- Selected Items Info -->
+        <div class="selected-items-info" id="selectedItemsInfo">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <i class="fas fa-check-circle" style="color: #4caf50; margin-right: 10px;"></i>
+                    <span class="selected-items-count" id="selectedCount">0 items</span> selected for checkout
+                </div>
+                <button class="action-btn" onclick="deselectAll()" style="background: #666; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer;">
+                    <i class="fas fa-times"></i> Deselect All
+                </button>
+            </div>
+        </div>
+
         <!-- Cart Content -->
         <div class="cart-container">
             <!-- Cart Items Section -->
             <div class="cart-items-section">
                 <div class="section-header">
-                    <h2>ITEM</h2>
+                    <h2>SHOPPING CART</h2>
+                    <div class="select-all-section">
+                        <input type="checkbox" id="selectAllItems" onchange="toggleSelectAll(this.checked)">
+                        <label for="selectAllItems">Select All</label>
+                    </div>
                 </div>
 
                 <!-- Cart Items -->
@@ -96,32 +191,32 @@
             <!-- Order Summary Section -->
             <div class="order-summary-section">
                 <div class="summary-header">
-                    <h2>Summary</h2>
+                    <h2>Order Summary</h2>
                 </div>
 
                 <div class="summary-content">
                     <div class="summary-row">
-                        <span>Subtotal</span>
-                        <span id="subtotalAmount">₱8,500.00</span>
+                        <span>Selected Items Subtotal</span>
+                        <span id="selectedSubtotal">₱0.00</span>
                     </div>
                     <div class="summary-row">
                         <span>Shipping</span>
-                        <span>₱0.00</span>
-                    </div>
-                    <div class="summary-row">
-                        <span>Tax</span>
-                        <span>₱0.00</span>
+                        <span id="shippingFee">₱150.00</span>
                     </div>
                     <div class="summary-divider"></div>
                     <div class="summary-row total">
-                        <span>Order Amount</span>
-                        <span id="totalAmount">₱8,500.00</span>
+                        <span>Estimated Total</span>
+                        <span id="estimatedTotal">₱0.00</span>
                     </div>
 
                     <!-- Checkout Button -->
-                    <button class="checkout-btn" id="proceedCheckout">
-                        PROCEED TO CHECKOUT
+                    <button class="checkout-btn" id="proceedCheckout" disabled>
+                        <i class="fas fa-lock"></i> PROCEED TO CHECKOUT
                     </button>
+                    
+                    <p style="font-size: 12px; color: #666; text-align: center; margin-top: 10px;">
+                        <i class="fas fa-info-circle"></i> Select items from your cart to proceed to checkout
+                    </p>
                 </div>
             </div>
         </div>
@@ -140,12 +235,12 @@
         };
 
         // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
     </script>
-    <script src="js/data.js"></script>
-    <script src="js/cart.js"></script>
     <script src="js/auth-check.js"></script>
     <script src="js/firebase-data.js"></script>
-    <script src="js/data.js"></script>
+    <script src="js/cart.js"></script>
 </body>
 </html>
