@@ -1,90 +1,32 @@
-# .github/workflows/main.yml
-name: shoehub
+name: ShoeHub
 
-# Controls when the workflow is triggered
+# 1. Trigger the workflow
 on:
   push:
     branches:
-      - main
-      - develop
-  pull_request:
-    branches:
-      - main
-      - develop
+      - main # Run this workflow whenever a change is pushed to the 'main' branch
 
-# Environment variables accessible in all jobs
-env:
-  NODE_VERSION: '18.x'
-  FIREBASE_PROJECT: 'shoehub-711f9'
-  # GitHub automatically provides a secret for tokens
-  # FIREBASE_TOKEN must be manually added as a secret in GitHub Settings/Secrets
-
+# 2. Define the jobs to run
 jobs:
-  # ------------------------------
-  # 🧪 Job 1: VALIDATE_CODE
-  # ------------------------------
-  validate_code:
+  deploy:
+    # Specify the operating system environment for the job
     runs-on: ubuntu-latest
+
+    # Define the steps within the job
     steps:
-      - name: ⬇️ Checkout Repository
+      # Step 1: Checkout the code
+      - name: Checkout repository code
+        # Uses an action to clone the repo content
         uses: actions/checkout@v4
 
-      - name: ⚙️ Setup Node.js
-        uses: actions/setup-node@v4
+      # Step 2: Deploy to GitHub Pages
+      - name: Deploy to GitHub Pages
+        # This is the dedicated action for deploying to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
-          
-      - name: 📝 Run Basic File & Syntax Checks
-        run: |
-          echo "Running file existence and JS syntax checks..."
-          
-          # Check for required JS files and fail if missing
-          for file in firebase-data.js firebase-auth.js auth-check.js data.js; do
-            test -f "$file" || (echo "❌ Required file $file missing" && exit 1);
-          done
-          
-          # Check JavaScript syntax using Node's check flag
-          for file in *.js; do
-            node -c "$file" || (echo "❌ Syntax error in $file" && exit 1);
-          done
-          
-      - name: 🔒 Check for Hardcoded Sensitive Data
-        # Grep for potential API keys; exit 0 ensures this step doesn't fail the workflow
-        run: |
-          echo "Checking for hardcoded sensitive data..."
-          ! grep -r "apiKey.*=.*\"[^\"]*\"" . --include="*.js" --include="*.html" | grep -v "dummy\|example\|test" || (echo "⚠️ Potential API key found" && exit 0)
-
-  # ------------------------------
-  # 🌐 Job 2: DEPLOY_TO_FIREBASE
-  # ------------------------------
-  deploy_to_firebase:
-    needs: validate_code # Ensures this job only runs if validation succeeds
-    runs-on: ubuntu-latest
-    steps:
-      - name: ⬇️ Checkout Repository
-        uses: actions/checkout@v4
-        
-      - name: 📦 Prepare Deployment Artifact
-        run: |
-          echo "Creating 'dist' directory and copying files..."
-          mkdir -p dist
-
-          # Copy all source files (HTML, JS, CSS, images) directly into 'dist/'
-          find . -type f \
-            -not -path "./.git/*" \
-            -not -name ".*yml" \
-            -not -name "package.json" \
-            -not -name "package-lock.json" \
-            -exec cp --parents {} dist/ \;
-            
-      # Use an official Firebase Action for deployment
-      - name: 🚀 Deploy to Hosting (Main Branch: Production / Other Branches: Preview)
-        uses: FirebaseExtended/action-hosting-deploy@v0
-        with:
-          # This action automatically uses the FIREBASE_TOKEN from secrets
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_SHOECENTER_711F9 }}
-          projectId: ${{ env.FIREBASE_PROJECT }}
-          channelId: ${{ github.ref_name == 'main' && 'live' || github.ref_name }} # Uses 'live' for main, branch name for others
-          entryPoint: ./dist # Specifies the directory to deploy
-          expires: ${{ github.ref_name == 'main' && '' || '7d' }} # No expiration for main (live), 7 days for others
+          # Automatically uses the default GitHub token for deployment authentication
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          # The branch to deploy to (usually gh-pages or the main branch for a user/org page)
+          publish_branch: gh-pages
+          # The directory containing the static HTML files (often the root '.')
+          publish_dir: .
