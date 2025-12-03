@@ -67,7 +67,7 @@ jobs:
           # Required inputs for Netlify
           # The Netlify action deploys the contents of the 'deploy_root' folder
           publish-dir: 'deploy_root' 
-          NETLIFY_AUTH_TOKEN: ${{ secrets.nfp_FpD9aavho4P4qUgvsWswHXwWH664mPfs38d8 }}
-          NETLIFY_SITE_ID: ${{ secrets.8a6a0278-e87a-41f3-a4ab-cad3d732e3c9 }}
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
           # Optional: Specify the branch to deploy to production
           production-branch: main
