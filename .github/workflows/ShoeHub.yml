@@ -11,7 +11,7 @@ on:
 jobs:
   # 1. CHECK JOB: Runs first to perform basic validation (e.g., check for index.html)
   check_html:
-    name: Check Static Files
+    name: Test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -29,7 +29,7 @@ jobs:
 
   # 2. PREPARE JOB: Runs only if the CHECK job succeeds
   prepare_files:
-    name: Prepare Deployment Artifact
+    name: Build
     # This job requires the 'check_html' job to pass
     needs: check_html
     runs-on: ubuntu-latest
@@ -47,7 +47,7 @@ jobs:
 
   # 3. DEPLOY JOB: Runs only if the PREPARE job succeeds
   deploy:
-    name: Deploy to Netlify
+    name: Deploy
     # This job requires the 'prepare_files' job to pass
     needs: prepare_files
     runs-on: ubuntu-latest
