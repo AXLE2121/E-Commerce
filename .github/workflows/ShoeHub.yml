@@ -30,6 +30,7 @@ jobs:
       - name: Run Tests
         run: npm test # Replace with 'npm run test' or similar if necessary
 
+
   # 2. BUILD JOB: Runs only if the TEST job succeeds
   build:
     name: Build Project
