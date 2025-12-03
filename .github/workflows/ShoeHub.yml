@@ -1,32 +1,85 @@
 name: ShoeHub
 
-# 1. Trigger the workflow
+# Trigger the workflow on pushes to the main or develop branches
 on:
   push:
     branches:
-      - main # Run this workflow whenever a change is pushed to the 'main' branch
+      - main
+      - develop
 
-# 2. Define the jobs to run
+# --- JOBS START HERE ---
 jobs:
-  deploy:
-    # Specify the operating system environment for the job
+  # 1. TEST JOB: Runs first to ensure code quality
+  test:
+    name: Run Tests
     runs-on: ubuntu-latest
-
-    # Define the steps within the job
     steps:
-      # Step 1: Checkout the code
-      - name: Checkout repository code
-        # Uses an action to clone the repo content
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      
+      # Setup Node.js (Adjust version as needed for your project)
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Dependencies
+        run: npm install
+
+      # Execute your test command (e.g., unit/integration tests)
+      - name: Run Tests
+        run: npm test # Replace with 'npm run test' or similar if necessary
+
+  # 2. BUILD JOB: Runs only if the TEST job succeeds
+  build:
+    name: Build Project
+    # This job requires the 'test' job to pass
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
         uses: actions/checkout@v4
 
-      # Step 2: Deploy to GitHub Pages
-      - name: Deploy to GitHub Pages
-        # This is the dedicated action for deploying to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          # Automatically uses the default GitHub token for deployment authentication
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          # The branch to deploy to (usually gh-pages or the main branch for a user/org page)
-          publish_branch: gh-pages
-          # The directory containing the static HTML files (often the root '.')
-          publish_dir: .
+          node-version: '20'
+
+      - name: Install Dependencies
+        run: npm install
+
+      # Execute the build command (e.g., creates the 'dist' or 'build' folder)
+      - name: Build Production Artifacts
+        run: npm run build # The output directory is typically 'dist' or 'build'
+
+      # Upload the built files to share them with the next job
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-package
+          path: dist # *** Change 'dist' to your actual build folder name! ***
+
+  # 3. DEPLOY JOB: Runs only if the BUILD job succeeds
+  deploy:
+    name: Deploy to Netlify
+    # This job requires the 'build' job to pass
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Build Artifact
+        # Downloads the files created in the 'build' job
+        uses: actions/download-artifact@v4
+        with:
+          name: deployment-package
+          path: dist # Must match the 'path' used in the upload step
+
+      # The Netlify deployment action
+      - name: Netlify Deploy
+        uses: nwtgck/actions-netlify@v2.0
+        with:
+          # Required inputs for Netlify
+          publish-dir: 'dist' # *** Must match the folder downloaded/uploaded! ***
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+          # Optional: Specify the branch to deploy to production
+          production-branch: main
