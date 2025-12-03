@@ -9,77 +9,64 @@ on:
 
 # --- JOBS START HERE ---
 jobs:
-  # 1. TEST JOB: Runs first to ensure code quality
-  test:
-    name: Run Tests
+  # 1. CHECK JOB: Runs first to perform basic validation (e.g., check for index.html)
+  check_html:
+    name: Check Static Files
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
       
-      # Setup Node.js (Adjust version as needed for your project)
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
+      # Optional: Add a step here to run an HTML linter or specific validation.
+      # For now, we'll just check for a critical file.
+      - name: Verify Index File Exists
+        # This will fail the job if index.html is missing from the root.
+        run: |
+          if [ ! -f index.html ]; then
+            echo "::error file=index.html::index.html not found in the repository root. Deployment will fail."
+            exit 1
+          fi
 
-      - name: Install Dependencies
-        run: npm install
-
-      # Execute your test command (e.g., unit/integration tests)
-      - name: Run Tests
-        run: npm test # Replace with 'npm run test' or similar if necessary
-
-
-  # 2. BUILD JOB: Runs only if the TEST job succeeds
-  build:
-    name: Build Project
-    # This job requires the 'test' job to pass
-    needs: test
+  # 2. PREPARE JOB: Runs only if the CHECK job succeeds
+  prepare_files:
+    name: Prepare Deployment Artifact
+    # This job requires the 'check_html' job to pass
+    needs: check_html
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install Dependencies
-        run: npm install
-
-      # Execute the build command (e.g., creates the 'dist' or 'build' folder)
-      - name: Build Production Artifacts
-        run: npm run build # The output directory is typically 'dist' or 'build'
-
-      # Upload the built files to share them with the next job
-      - name: Upload Build Artifact
+      # Upload the static files (from the root directory '.') to share them with the deploy job
+      - name: Upload Deployment Artifact
         uses: actions/upload-artifact@v4
         with:
           name: deployment-package
-          path: dist # *** Change 'dist' to your actual build folder name! ***
+          # We upload the root directory contents, as this is the "build" step for plain HTML
+          path: . 
 
-  # 3. DEPLOY JOB: Runs only if the BUILD job succeeds
+  # 3. DEPLOY JOB: Runs only if the PREPARE job succeeds
   deploy:
     name: Deploy to Netlify
-    # This job requires the 'build' job to pass
-    needs: build
+    # This job requires the 'prepare_files' job to pass
+    needs: prepare_files
     runs-on: ubuntu-latest
     steps:
       - name: Download Build Artifact
-        # Downloads the files created in the 'build' job
+        # Downloads the static files prepared in the 'prepare_files' job
         uses: actions/download-artifact@v4
         with:
           name: deployment-package
-          path: dist # Must match the 'path' used in the upload step
+          # The path where the files will be downloaded (the root for deployment)
+          path: deploy_root 
 
       # The Netlify deployment action
       - name: Netlify Deploy
         uses: nwtgck/actions-netlify@v2.0
         with:
           # Required inputs for Netlify
-          publish-dir: 'dist' # *** Must match the folder downloaded/uploaded! ***
+          # The Netlify action deploys the contents of the 'deploy_root' folder
+          publish-dir: 'deploy_root' 
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
           # Optional: Specify the branch to deploy to production
