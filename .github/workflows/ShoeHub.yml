@@ -1,398 +1,214 @@
-name: ShoeHub
-
-on:
-  push:
-    branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
-  workflow_dispatch:  # Manual trigger
-
-env:
-  FIREBASE_PROJECT: 'shoehub-711f9'
-
-jobs:
-  test:
-    name: Test & Validate
+  validate:
+    name: 🧪 Validate Project
     runs-on: ubuntu-latest
     
     steps:
-    - name: Checkout code
+    - name: 📥 Checkout code
       uses: actions/checkout@v4
       
-    - name: Check file structure
+    - name: 🔍 Check Project Structure
       run: |
-        echo "📁 Checking project structure..."
-        echo "======================"
-        find . -type f -name "*.html" | head -10
-        echo "======================"
-        find . -type f -name "*.js" | head -10
-        echo "======================"
-        find . -type f -name "*.css" | head -10
+        echo "📁 PROJECT STRUCTURE ANALYSIS"
+        echo "============================="
         
-    - name: Validate HTML files
+        # List all HTML files
+        echo ""
+        echo "📄 HTML FILES:"
+        echo "-------------"
+        find . -name "*.html" -type f | sort
+        
+        # List all JS files
+        echo ""
+        echo "📜 JAVASCRIPT FILES:"
+        echo "-------------------"
+        find . -name "*.js" -type f | sort
+        
+        # List all CSS files
+        echo ""
+        echo "🎨 CSS FILES:"
+        echo "------------"
+        find . -name "*.css" -type f | sort
+        
+    - name: ✅ Validate Required Files
       run: |
-        echo "🔍 Validating HTML files..."
+        echo ""
+        echo "✅ CHECKING REQUIRED FILES"
         echo "=========================="
         
-        # Check for required HTML files
-        REQUIRED_HTML_FILES=("index.html" "order-confirmation.html")
-        for file in "${REQUIRED_HTML_FILES[@]}"; do
+        # Required files based on your screenshot
+        REQUIRED_FILES=(
+          "index.html"
+          "cart.html"
+          "checkout.html"
+          "login.html"
+          "register.html"
+          "my-orders.html"
+          "order-confirmation.html"
+          "order-details.html"
+          "reset-password.html"
+          "verify-email.html"
+          "viewProduct.html"
+          "test-direction.html"
+        )
+        
+        ALL_GOOD=true
+        
+        echo ""
+        echo "📋 REQUIRED FILES:"
+        for file in "${REQUIRED_FILES[@]}"; do
           if [ -f "$file" ]; then
-            echo "✅ $file exists"
-            # Check basic HTML structure
-            if grep -q "<!DOCTYPE html>" "$file"; then
-              echo "  ✓ Valid DOCTYPE"
-            else
-              echo "  ⚠ Missing DOCTYPE"
-            fi
+            echo "   ✅ $file"
           else
-            echo "❌ $file missing!"
+            echo "   ❌ $file - MISSING"
+            ALL_GOOD=false
           fi
         done
         
-    - name: Validate JavaScript files
-      run: |
-        echo "📜 Validating JavaScript files..."
-        echo "================================"
+        if [ "$ALL_GOOD" = false ]; then
+          echo ""
+          echo "❌ ERROR: Some required files are missing!"
+          exit 1
+        fi
         
-        # Check JS syntax
-        if [ -d "js" ]; then
-          for js_file in js/*.js; do
-            if [ -f "$js_file" ]; then
-              echo "🔎 Checking $js_file"
-              # Check for syntax errors
-              if node -c "$js_file" 2>/dev/null; then
-                echo "  ✅ Valid JavaScript syntax"
-              else
-                echo "  ❌ Syntax error in $js_file"
-                # Show error
-                node -c "$js_file" 2>&1 | head -5
-              fi
+    - name: 🛠️ Validate HTML Syntax
+      run: |
+        echo ""
+        echo "🔧 HTML VALIDATION"
+        echo "=================="
+        
+        # Check HTML files for basic structure
+        HTML_ERRORS=false
+        
+        for html_file in *.html; do
+          if [ -f "$html_file" ]; then
+            echo ""
+            echo "🔍 Checking $html_file:"
+            
+            # Check for DOCTYPE
+            if grep -q "<!DOCTYPE html>" "$html_file"; then
+              echo "   ✅ DOCTYPE present"
+            else
+              echo "   ❌ Missing DOCTYPE"
+              HTML_ERRORS=true
             fi
-          done
-        else
-          echo "⚠ js/ directory not found"
+          fi
+        done
+        
+        if [ "$HTML_ERRORS" = true ]; then
+          echo ""
+          echo "❌ HTML validation failed!"
+          exit 1
         fi
         
-        # Check for console logs (optional warning)
-        echo "📝 Checking for console logs..."
-        CONSOLE_COUNT=$(grep -r "console\." js/ 2>/dev/null | wc -l || echo "0")
-        echo "Found $CONSOLE_COUNT console statements"
-        
-    - name: Check for broken links
+    - name: 📜 Validate JavaScript
       run: |
-        echo "🔗 Checking for broken image links..."
-        echo "=================================="
+        echo ""
+        echo "📜 JAVASCRIPT VALIDATION"
+        echo "========================"
         
-        # Find all image references
-        find . -type f \( -name "*.html" -o -name "*.js" -o -name "*.css" \) -exec grep -h -E "(src=|href=|url\(|background.*:)" {} \; | \
-          grep -E "\.(jpg|jpeg|png|gif|svg|ico|webp)" | \
-          head -20 | while read -r line; do
-            echo "Found: $line"
-          done
-        
-    - name: Security check
-      run: |
-        echo "🔒 Running security checks..."
-        echo "============================"
-        
-        # Check for hardcoded API keys (Firebase config)
-        echo "Checking for Firebase configuration..."
-        if grep -r "apiKey.*:.*['\"]" --include="*.js" --include="*.html" . | grep -v "test\|dummy\|example"; then
-          echo "⚠ Found potential Firebase API key"
-          echo "Consider using environment variables for production"
-        else
-          echo "✅ No hardcoded API keys found"
+        # Check JS directory exists
+        if [ ! -d "js" ]; then
+          echo "⚠️  No 'js' directory found"
+          exit 0
         fi
         
-        # Check for external dependencies
-        echo "Checking external dependencies..."
-        EXTERNAL_DEPS=$(grep -r "https://" --include="*.html" --include="*.js" --include="*.css" . | \
-          grep -E "(cdnjs|googleapis|gstatic|fontawesome|bootstrap)" | wc -l)
-        echo "Found $EXTERNAL_DEPS external dependencies"
+        JS_ERRORS=false
         
-    - name: Run basic tests
+        for js_file in js/*.js; do
+          if [ -f "$js_file" ]; then
+            echo ""
+            echo "🔍 Checking $js_file:"
+            
+            # Check JavaScript syntax
+            if node -c "$js_file" 2>/dev/null; then
+              echo "   ✅ Valid syntax"
+            else
+              echo "   ❌ Syntax error"
+              node -c "$js_file" 2>&1 | head -2
+              JS_ERRORS=true
+            fi
+          fi
+        done
+        
+        if [ "$JS_ERRORS" = true ]; then
+          echo ""
+          echo "❌ JavaScript validation failed!"
+          exit 1
+        fi
+        
+    - name: 🔗 Check Links and Resources
+      run: |
+        echo ""
+        echo "🔗 LINK VALIDATION"
+        echo "=================="
+        
+        echo "Checking for broken image references..."
+        echo "Found these image references:"
+        grep -r "\.\(jpg\|jpeg\|png\|gif\|svg\)" --include="*.html" --include="*.js" --include="*.css" . | head -10
+        
+    - name: 🔒 Security Check
+      run: |
+        echo ""
+        echo "🔒 SECURITY CHECK"
+        echo "================="
+        
+        echo "Checking for exposed Firebase configuration..."
+        
+        # Check for hardcoded Firebase config
+        if grep -r "apiKey.*:.*['\"]" --include="*.js" --include="*.html" . | grep -v "test\|example\|dummy" | head -2; then
+          echo ""
+          echo "⚠️  WARNING: Potential API keys found in code"
+        else
+          echo "✅ No exposed API keys found"
+        fi
+        
+    - name: 🧪 Run Basic Tests
       run: |
         echo "🧪 Running basic tests..."
         echo "========================"
         
-        # Create a simple test script if it doesn't exist
-        if [ ! -f "test.js" ]; then
-          cat > test.js << 'EOF'
-          // Basic test suite for vanilla JS project
-          console.log("🧪 Running Vanilla JS Project Tests");
-          console.log("==================================");
-          
-          // Test 1: Check if main files exist
-          const fs = require('fs');
-          const path = require('path');
-          
-          const requiredFiles = [
-            'index.html',
-            'order-confirmation.html',
-            'js/order-confirmation.js',
-            'styles/style.css'
-          ];
-          
-          let allFilesExist = true;
-          requiredFiles.forEach(file => {
-            const exists = fs.existsSync(file);
-            console.log(`${exists ? '✅' : '❌'} ${file} ${exists ? 'exists' : 'missing'}`);
-            if (!exists) allFilesExist = false;
-          });
-          
-          // Test 2: Check HTML files
-          console.log("\n📄 Checking HTML structure...");
-          const htmlFiles = fs.readdirSync('.').filter(f => f.endsWith('.html'));
-          htmlFiles.forEach(file => {
-            const content = fs.readFileSync(file, 'utf8');
-            const hasDoctype = content.includes('<!DOCTYPE html>');
-            const hasHtmlTag = content.includes('<html');
-            const hasHead = content.includes('<head>');
-            const hasBody = content.includes('<body>');
-            
-            console.log(`\n${file}:`);
-            console.log(`  ${hasDoctype ? '✅' : '❌'} DOCTYPE`);
-            console.log(`  ${hasHtmlTag ? '✅' : '❌'} <html> tag`);
-            console.log(`  ${hasHead ? '✅' : '❌'} <head> section`);
-            console.log(`  ${hasBody ? '✅' : '❌'} <body> section`);
-          });
-          
-          // Test 3: Check JS files for common errors
-          console.log("\n📜 Checking JavaScript files...");
-          if (fs.existsSync('js')) {
-            const jsFiles = fs.readdirSync('js').filter(f => f.endsWith('.js'));
-            jsFiles.forEach(file => {
-              try {
-                require(`./js/${file}`);
-                console.log(`✅ js/${file} - No syntax errors`);
-              } catch (e) {
-                console.log(`❌ js/${file} - Error: ${e.message.split('\n')[0]}`);
-              }
-            });
-          }
-          
-          console.log("\n🎉 Test Summary:");
-          if (allFilesExist) {
-            console.log("✅ All required files present");
-            process.exit(0);
-          } else {
-            console.log("❌ Some required files are missing");
-            process.exit(1);
-          }
-          EOF
-        fi
+        # Simple file existence checks
+        ESSENTIAL_FILES=("index.html" "js/order-confirmation.js" "styles/style.css")
+        all_good=true
         
-        # Run the test
-        node test.js
-        
-    - name: Performance check
-      run: |
-        echo "⚡ Performance check..."
-        echo "====================="
-        
-        # Check image sizes
-        if [ -d "images" ]; then
-          echo "Checking image sizes..."
-          find images -type f -name "*.jpg" -o -name "*.png" -o -name "*.jpeg" | \
-            xargs -I {} sh -c 'echo "  {}: $(identify -format "%wx%h" {} 2>/dev/null || du -h {} | cut -f1)"' | head -10
-        fi
-        
-        # Check CSS file size
-        if [ -f "styles/style.css" ]; then
-          CSS_SIZE=$(wc -c < styles/style.css)
-          echo "CSS file size: $((CSS_SIZE / 1024)) KB"
-        fi
-
-  build:
-    name: Prepare Deployment
-    runs-on: ubuntu-latest
-    needs: test
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-    
-    outputs:
-      version: ${{ steps.version.outputs.version }}
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Create deployment version
-      id: version
-      run: |
-        # Create a version string
-        VERSION="${GITHUB_SHA:0:7}-$(date +%Y%m%d-%H%M)"
-        echo "version=$VERSION" >> $GITHUB_OUTPUT
-        echo "🚀 Deployment version: $VERSION"
-        
-    - name: Prepare deployment package
-      run: |
-        echo "📦 Preparing deployment package..."
-        
-        # Create deployment directory
-        mkdir -p deploy
-        
-        # Copy all necessary files
-        echo "📁 Copying files..."
-        
-        # HTML files
-        find . -maxdepth 1 -name "*.html" -exec cp {} deploy/ \;
-        
-        # Directories
-        if [ -d "js" ]; then
-          cp -r js/ deploy/
-        fi
-        
-        if [ -d "styles" ]; then
-          cp -r styles/ deploy/
-        fi
-        
-        if [ -d "images" ]; then
-          cp -r images/ deploy/
-        fi
-        
-        # Create deployment info file
-        cat > deploy/DEPLOYMENT.md << EOF
-        # Deployment Information
-        
-        - Version: ${{ steps.version.outputs.version }}
-        - Commit: ${{ github.sha }}
-        - Branch: ${{ github.ref_name }}
-        - Timestamp: $(date)
-        - Triggered by: ${{ github.actor }}
-        
-        ## Files Deployed:
-        $(find deploy -type f | sort)
-        EOF
-        
-        # Create version file
-        echo "${{ steps.version.outputs.version }}" > deploy/VERSION
-        
-        # Show deployment structure
-        echo "📁 Deployment structure:"
-        find deploy -type f | sort | head -20
-        
-    - name: Validate deployment package
-      run: |
-        echo "🔍 Validating deployment package..."
-        
-        REQUIRED_IN_DEPLOY=("index.html" "js/order-confirmation.js")
-        
-        for file in "${REQUIRED_IN_DEPLOY[@]}"; do
-          if [ -f "deploy/$file" ]; then
-            echo "✅ deploy/$file exists"
+        for file in "${ESSENTIAL_FILES[@]}"; do
+          if [ -f "$file" ]; then
+            echo "✅ $file exists"
           else
-            echo "❌ deploy/$file missing!"
-            exit 1
+            echo "❌ $file is missing"
+            all_good=false
           fi
         done
         
-        echo "✅ Deployment package validated successfully"
+        # Count HTML files
+        HTML_COUNT=$(find . -name "*.html" -type f | wc -l)
+        echo "📄 Found $HTML_COUNT HTML files"
         
-    - name: Create deployment archive
-      run: |
-        echo "🗜 Creating deployment archive..."
+        # Count JS files
+        JS_COUNT=$(find . -name "*.js" -type f | wc -l)
+        echo "📜 Found $JS_COUNT JS files"
         
-        # Create zip file
-        cd deploy && zip -r ../deployment.zip .
-        
-        # Show archive info
-        echo "📦 Archive created: deployment.zip"
-        echo "📊 Size: $(du -h ../deployment.zip | cut -f1)"
-        
-    - name: Upload deployment artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: web-deployment
-        path: |
-          deploy/
-          deployment.zip
-        retention-days: 7
-
-  deploy:
-    name: Deploy to Firebase
-    runs-on: ubuntu-latest
-    needs: build
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
-    
-    steps:
-    - name: Download deployment artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: web-deployment
-        
-    - name: Setup Firebase CLI
-      run: |
-        echo "🚀 Setting up Firebase CLI..."
-        npm install -g firebase-tools
-        
-    - name: Deploy to Firebase Hosting
-      env:
-        FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
-      run: |
-        echo "🌐 Deploying to Firebase..."
-        
-        # Create firebase.json if it doesn't exist
-        if [ ! -f "firebase.json" ]; then
-          cat > firebase.json << EOF
-          {
-            "hosting": {
-              "public": ".",
-              "ignore": [
-                "firebase.json",
-                "**/.*",
-                "**/node_modules/**"
-              ],
-              "rewrites": [
-                {
-                  "source": "**",
-                  "destination": "/index.html"
-                }
-              ]
-            }
-          }
-          EOF
-          echo "📄 Created firebase.json"
+        if [ "$all_good" = true ]; then
+          echo "🎉 All basic tests passed!"
+        else
+          echo "❌ Some tests failed!"
+          exit 1
         fi
         
-        # Deploy to Firebase
-        echo "🚀 Starting deployment..."
-        
-        # List Firebase projects
-        firebase projects:list --token $FIREBASE_TOKEN || true
-        
-        # Use the specified project
-        firebase use $FIREBASE_PROJECT --token $FIREBASE_TOKEN || echo "⚠ Could not set project, continuing..."
-        
-        # Deploy hosting
-        firebase deploy --only hosting --token $FIREBASE_TOKEN
-        
-    - name: Post-deployment verification
+    - name: 📊 Generate Validation Report
       run: |
-        echo "✅ Deployment completed!"
         echo ""
-        echo "📱 Your site is now live at:"
-        echo "   🔗 https://${{ env.FIREBASE_PROJECT }}.web.app"
-        echo "   🔗 https://${{ env.FIREBASE_PROJECT }}.firebaseapp.com"
-        echo ""
-        echo "📊 Version: ${{ needs.build.outputs.version }}"
-        echo "📝 Commit: ${{ github.sha }}"
+        echo "📊 VALIDATION REPORT"
+        echo "===================="
         
-    - name: Create deployment summary
-      if: always()
-      run: |
-        echo "# 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "**Status:** ✅ Successfully deployed!" >> $GITHUB_STEP_SUMMARY
-        echo "**Version:** ${{ needs.build.outputs.version }}" >> $GITHUB_STEP_SUMMARY
-        echo "**Project:** ${{ env.FIREBASE_PROJECT }}" >> $GITHUB_STEP_SUMMARY
-        echo "**Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "## 🌐 Live URLs" >> $GITHUB_STEP_SUMMARY
-        echo "- 🔗 [https://${{ env.FIREBASE_PROJECT }}.web.app](https://${{ env.FIREBASE_PROJECT }}.web.app)" >> $GITHUB_STEP_SUMMARY
-        echo "- 🔗 [https://${{ env.FIREBASE_PROJECT }}.firebaseapp.com](https://${{ env.FIREBASE_PROJECT }}.firebaseapp.com)" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "## 📋 Files Deployed" >> $GITHUB_STEP_SUMMARY
-        echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-        find . -type f -name "*.html" -o -name "*.js" -o -name "*.css" | sort | head -15 >> $GITHUB_STEP_SUMMARY
-        echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+        # Count files
+        HTML_COUNT=$(find . -name "*.html" -type f | wc -l)
+        JS_COUNT=$(find . -name "*.js" -type f | wc -l)
+        CSS_COUNT=$(find . -name "*.css" -type f | wc -l)
+        
+        echo "📁 File Counts:"
+        echo "   HTML: $HTML_COUNT files"
+        echo "   JavaScript: $JS_COUNT files"
+        echo "   CSS: $CSS_COUNT files"
+        echo ""
+        echo "✅ Validation completed successfully!"
