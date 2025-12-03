@@ -162,40 +162,51 @@
     <script src="js/components.js"></script>
     <script src="js/data.js"></script>
     <script src="js/app.js"></script>
+    <script src="js/auth-check.js"></script>
     
     <!-- Add this script for index page specific functionality -->
     <script>
     // Check if user is logged in and update UI
-   auth.onAuthStateChanged(async (user) => {
-    console.log('Auth state changed:', user ? user.email : 'No user');
-    const authButtons = document.getElementById('authButtons');
-    const userInfo = document.getElementById('userInfo');
-    const userEmail = document.getElementById('userEmail');
-    const adminBtn = document.getElementById('adminBtn');
+    const auth = firebase.auth();
     
-    if (user) {
-        // User is signed in
-        console.log('User is logged in on index page:', user.email);
-        if (authButtons) authButtons.style.display = 'none';
-        if (userInfo) userInfo.style.display = 'flex';
-        if (userEmail) userEmail.textContent = user.email;
+    auth.onAuthStateChanged(async (user) => {
+        console.log('Auth state changed:', user ? user.email : 'No user');
+        const authButtons = document.getElementById('authButtons');
+        const userInfo = document.getElementById('userInfo');
+        const userEmail = document.getElementById('userEmail');
+        const adminBtn = document.getElementById('adminBtn');
         
-        // Check if user is admin and show admin button
-        try {
-            const isAdmin = await checkIfUserIsAdmin(user.uid);
-            if (adminBtn && isAdmin) {
-                adminBtn.style.display = 'inline-block';
+        if (user) {
+            // User is signed in
+            console.log('User is logged in on index page:', user.email);
+            if (authButtons) authButtons.style.display = 'none';
+            if (userInfo) userInfo.style.display = 'flex';
+            if (userEmail) userEmail.textContent = user.email;
+            
+            // Check if user is admin and show admin button
+            try {
+                const db = firebase.firestore();
+                const userDoc = await db.collection('users').doc(user.uid).get();
+                
+                if (userDoc.exists) {
+                    const userData = userDoc.data();
+                    if (adminBtn && (userData.role === 'admin' || user.email === 'admin@footlocker.com')) {
+                        adminBtn.style.display = 'inline-block';
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking admin status:', error);
             }
-        } catch (error) {
-            console.error('Error checking admin status:', error);
+            
+            // Update orders count using the same logic as my-orders.js
+            updateOrdersCountOnIndex();
+        } else {
+            // User is signed out
+            console.log('User is not logged in on index page');
+            if (authButtons) authButtons.style.display = 'flex';
+            if (userInfo) userInfo.style.display = 'none';
+            if (adminBtn) adminBtn.style.display = 'none';
         }
-    } else {
-        // User is signed out
-        console.log('User is not logged in on index page');
-        if (authButtons) authButtons.style.display = 'flex';
-        if (userInfo) userInfo.style.display = 'none';
-        if (adminBtn) adminBtn.style.display = 'none';
-    }
     });
 
     // Logout functionality
@@ -212,14 +223,49 @@
     // Test function to manually load products
     window.testLoadProducts = async function() {
         console.log('Manual test: Loading products...');
-        await initializeProducts();
-        console.log('Products loaded:', products.length);
-        
-        // Force render
-        if (typeof filterProducts === 'function') {
-            filterProducts();
+        if (typeof initializeProducts === 'function') {
+            await initializeProducts();
+            console.log('Products loaded');
         }
     };
+
+    // Update orders count on index.html using the same logic as my-orders.js
+    async function updateOrdersCountOnIndex() {
+        const user = auth.currentUser;
+        if (!user) return;
+        
+        try {
+            const db = firebase.firestore();
+            
+            // Use the SAME query as in my-orders.js (only by userId)
+            const ordersSnapshot = await db.collection('orders')
+                .where('userId', '==', user.uid)
+                .get();
+            
+            const ordersCount = ordersSnapshot.size;
+            
+            console.log('Index page - Orders count (userId only):', ordersCount);
+            
+            // Update badge on index page
+            document.querySelectorAll('.orders-btn .icon-badge').forEach(badge => {
+                badge.textContent = ordersCount > 99 ? '99+' : ordersCount;
+                badge.style.display = ordersCount > 0 ? 'flex' : 'none';
+            });
+            
+            // Store in localStorage for consistency
+            localStorage.setItem('user_orders_count', ordersCount.toString());
+            
+        } catch (error) {
+            console.error('Error updating orders count on index page:', error);
+        }
+    }
+
+    // Update orders count periodically (every 10 seconds)
+    setInterval(() => {
+        if (auth.currentUser) {
+            updateOrdersCountOnIndex();
+        }
+    }, 10000);
     </script>
 
     <script>
@@ -232,104 +278,8 @@
         console.log('Firebase apps:', firebase.apps);
         console.log('Firebase auth:', typeof firebase.auth);
         console.log('Firebase firestore:', typeof firebase.firestore);
-        
-        // Check if we can access Firestore
-        try {
-            const db = firebase.firestore();
-            console.log('Firestore available:', db ? 'YES' : 'NO');
-        } catch (error) {
-            console.error('Firestore error:', error);
-        }
     }
     </script>
 
-    <script>
-// Debug script to help troubleshoot
-console.log('=== DEBUG: Scripts loaded ===');
-console.log('Firebase:', typeof firebase !== 'undefined' ? 'Loaded' : 'Not loaded');
-console.log('firebase.auth:', typeof firebase.auth !== 'undefined' ? 'Available' : 'Not available');
-console.log('firebase.firestore:', typeof firebase.firestore !== 'undefined' ? 'Available' : 'Not available');
-
-// Manual test button in console
-window.debugProducts = async function() {
-    console.log('=== MANUAL PRODUCT TEST ===');
-    
-    if (!firebase.apps.length) {
-        console.error('Firebase not initialized');
-        return;
-    }
-    
-    try {
-        const db = firebase.firestore();
-        const snapshot = await db.collection('products').get();
-        console.log(`Found ${snapshot.size} products`);
-        
-        if (snapshot.empty) {
-            console.log('No products in Firestore');
-        } else {
-            snapshot.forEach(doc => {
-                console.log(`Product ${doc.id}:`, doc.data());
-            });
-        }
-    } catch (error) {
-        console.error('Firestore error:', error);
-    }
-};
-
-// Add a test button to page for easy debugging
-document.addEventListener('DOMContentLoaded', function() {
-    // Add test button to header for debugging
-    setTimeout(() => {
-        const header = document.querySelector('.header-top');
-        if (header) {
-            const testBtn = document.createElement('button');
-            testBtn.innerHTML = '<i class="fas fa-bug"></i> Test Products';
-            testBtn.style.cssText = `
-                margin-left: 10px;
-                padding: 5px 10px;
-                background: #4caf50;
-                color: white;
-                border: none;
-                border-radius: 4px;
-                cursor: pointer;
-                font-size: 12px;
-            `;
-            testBtn.onclick = function() {
-                if (typeof initializeProducts === 'function') {
-                    initializeProducts();
-                } else {
-                    alert('initializeProducts function not found');
-                }
-            };
-            
-            const logoContainer = document.querySelector('.logo-container');
-            if (logoContainer) {
-                logoContainer.appendChild(testBtn);
-            }
-        }
-    }, 2000);
-});
-
-setInterval(() => {
-    if (firebase.auth().currentUser) {
-        const db = firebase.firestore();
-        
-        // Try multiple queries
-        Promise.all([
-            db.collection('orders').where('userId', '==', firebase.auth().currentUser.uid).get().catch(() => ({ size: 0 })),
-            db.collection('orders').where('userEmail', '==', firebase.auth().currentUser.email).get().catch(() => ({ size: 0 }))
-        ]).then(([userIdOrders, emailOrders]) => {
-            const totalOrders = userIdOrders.size + emailOrders.size;
-            
-            // Update all badges
-            document.querySelectorAll('.orders-btn .icon-badge').forEach(badge => {
-                badge.textContent = totalOrders;
-                badge.style.display = totalOrders > 0 ? 'flex' : 'none';
-            });
-        });
-    }
-}, 5000); // Check every 5 seconds
-
-</script>
 </body>
 </html>
