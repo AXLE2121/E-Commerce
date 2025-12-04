@@ -123,7 +123,7 @@ function displayProduct(product) {
     breadcrumb.textContent = product.name || 'Product';
     
     // Update page title
-    document.title = `${product.name} - Foot Locker`;
+    document.title = `${product.name} - ShoeHub`;
     
     // Generate size options HTML - use actual sizes or defaults
     const sizeOptions = (product.sizes || ['US 8', 'US 9', 'US 9.5', 'US 10', 'US 11', 'US 12'])
